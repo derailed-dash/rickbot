@@ -1,0 +1,7 @@
+[project]
+name = "rickbot"
+version = "0.1.0"
+description = "A chatbot based on Rick"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
