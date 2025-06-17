@@ -29,7 +29,7 @@ project/
 
 ### Every Session
 
-For local dev, always set these variables:
+For local dev, run the following from your project's root folder:
 
 ```bash
 # Authenticate yourself to gcloud
@@ -43,6 +43,7 @@ export GOOGLE_CLOUD_PROJECT="<Your Google Cloud Project ID>"
 export GOOGLE_CLOUD_REGION="<your region>"
 export MY_ORG="<enter your org domain>"
 export DOMAIN_NAME="<enter application domain name>"
+# Etc
 
 # Or load from .env, or .env.dev, or whatever
 source .env
@@ -56,6 +57,9 @@ gcloud config list project
 gcloud config set project $GOOGLE_CLOUD_PROJECT
 gcloud auth application-default set-quota-project $GOOGLE_CLOUD_PROJECT
 gcloud config list project
+
+# Once your venv has been created
+source .venv/bin/activate
 ```
 
 ### One-Time Google Cloud Setup
@@ -72,6 +76,13 @@ gcloud services enable \
   storage-component.googleapis.com \
   aiplatform.googleapis.com \
   iap.googleapis.com
+
+# Create the rickbot service account
+gcloud iam service-accounts create $RICKBOT_SA
+
+gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+  --member="serviceAccount:$RICKBOT_SA_EMAIL" \
+  --role="roles/aiplatform.user"
 
 # Allow Compute Engine default service account to build with Cloud Build
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
@@ -92,10 +103,6 @@ gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
 
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
    --member="group:gcp-devops@$MY_ORG" \
-   --role roles/cloudfunctions.admin
-
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
-   --member="group:gcp-devops@$MY_ORG" \
    --role roles/run.admin  
 
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
@@ -111,7 +118,8 @@ gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
 # Setup Python environment and install dependencies
 cd rickbot
 uv venv .venv
-uv pip install -r requirements.txt
+# uv pip install -r requirements.txt
+uv sync
 ```
 
 #### Running Streamlit App
@@ -170,6 +178,7 @@ Public service with no authentication:
 gcloud run deploy "$SERVICE_NAME" \
   --port=8080 \
   --image="$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$REPO/$SERVICE_NAME:$VERSION" \
+  --service-account=$RICKBOT_SA_EMAIL \
   --max-instances=1 \
   --allow-unauthenticated \
   --region=$GOOGLE_CLOUD_REGION \
@@ -182,19 +191,3 @@ gcloud run deploy "$SERVICE_NAME" \
 APP_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $GOOGLE_CLOUD_REGION --format="value(status.address.url)")
 echo $APP_URL
 ```
-
-This time, the service will require authentication. It will require a service account that is authorised.
-
-```bash
-# Deploy to Cloud Run - this takes a couple of minutes
-gcloud run deploy "$SERVICE_NAME" \
-  --port=8080 \
-  --image="$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$REPO/$SERVICE_NAME:$VERSION" \
-  --max-instances=1 \
-  --no-allow-unauthenticated \
-  --region=$GOOGLE_CLOUD_REGION \
-  --platform=managed  \
-  --project=$GOOGLE_CLOUD_PROJECT \
-  --set-env-vars=PROJECT_ID=$GOOGLE_CLOUD_PROJECT,REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL
-
-APP_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $GOOGLE_CLOUD_REGION --format="value(status.address.url)")
