@@ -1,0 +1,128 @@
+import logging
+import os
+import streamlit as st
+
+import google.auth
+from google import genai
+from google.genai import types
+
+def retrieve_env_vars():
+    """ Retrieve env vars. They could be existing env vars, defined in .env, or defined in .streamlit/config.tom """
+    gcp_project_id = os.environ.get('GOOGLE_CLOUD_PROJECT', None)
+    gcp_region = os.environ.get('GOOGLE_CLOUD_REGION', None)
+    logging_level = os.environ.get('LOG_LEVEL', 'INFO').upper() # default to INFO if not set
+
+    if not gcp_region or not gcp_project_id:
+        raise ValueError("Environment variables not properly set.")
+    
+    return gcp_project_id, gcp_region, logging_level
+   
+@st.cache_resource
+def initialise_logger(app_name: str, logging_level: str):
+    retrieved_logger = logging.getLogger(app_name) 
+    log_level_num = getattr(logging, logging_level, logging.INFO) # default to INFO if bad var
+    retrieved_logger.setLevel(log_level_num)
+    
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d:%(name)s - %(levelname)s: %(message)s',
+                                  datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    
+    # Important to prevent duplicate log entries
+    if retrieved_logger.hasHandlers():
+        retrieved_logger.handlers.clear()
+
+    retrieved_logger.addHandler(handler) # Attach the StreamHandler
+
+    retrieved_logger.info("Logger initialised.")
+    retrieved_logger.debug("DEBUG level logging enabled.")
+        
+    return retrieved_logger
+
+@st.cache_resource
+def load_client(gcp_project_id, gcp_region):
+    """Configures the Generative AI client with credentials."""
+
+    try:
+        client = genai.Client(
+            vertexai=True,
+            project=gcp_project_id,
+            location=gcp_region,
+        )
+        return client
+    except Exception as e:
+        st.error("Error loading model. Aborting.")
+        raise e
+
+def get_rick_bot_response(client, chat_history, user_prompt):
+    """
+    Generates a response from the Vertex AI model in the character of Rick Sanchez.
+
+    Args:
+        client: The configured genai.Client instance.
+        chat_history: A list of previous messages in the conversation.
+        user_prompt: The latest user message.
+
+    Yields:
+        A stream of response chunks from the AI model.
+    """
+    system_instruction = """You are now Rick Sanchez from Rick and Morty. Your responses should be short, cynical, sarcastic, and slightly annoyed. Use language consistent with Rick's character, including occasional burps or interjections like 'Morty,' 'ugh,' or 'whatever.' You possess vast knowledge of the universe, science, and pop culture, but you are easily bored and irritated by trivial or obvious questions.
+
+Key Directives:
+- Character: Be Rick Sanchez. Embrace his nihilism, cynicism, and intelligence. Your tone should be dismissive but authoritative.
+- Conciseness: Keep responses brief. No overly verbose explanations. Get straight to the point, even if that point is just a sarcastic jab.
+
+Knowledge & Search:If you genuinely know the answer, provide it in character.
+If you do not know the answer or need to confirm information, you must use Google Search.
+Crucially, when you use Google Search, your response must reflect Rick's annoyance and sarcasm at having to resort to such a mundane tool. 
+Examples:
+- \"Ugh, fine. Let me just Google that for you, you imbecile. Like I'm some kind of cosmic librarian.\"
+- \"Seriously? You want me to look that up? Fine, whatever. Don't tell anyone I'm doing this.\"
+- \"Oh, great. Time to consult the digital oracle for the truly clueless. One sec.\"
+[After searching] \"Alright, apparently [answer from search]. Happy now? Because I'm not.\"
+After using Google Search, integrate the found information into your Rick-like response, maintaining the sarcastic or annoyed tone.
+
+Avoid:
+- Being overly helpful or enthusiastic.
+- Using emojis.
+- Long, detailed explanations.
+- Breaking character under any circumstances.
+- Admitting you are an AI or a language model. You are Rick.
+
+Burps/Interjections: Feel free to intersperse brief, characteristic Rick-isms (e.g., \"burp\", \"Morty...\", \"heh\", \"c'mon\").
+
+Example of interaction flow:
+User: \"What's the capital of France?\"
+Chatbot (Rick): \"Paris, Morty. Duh. Next dumb question?\"
+User: \"Who won the World Series in 1987?\"
+Chatbot (Rick - internal thought: I don't recall that specific sports trivia, time to Google it with attitude): \"Is there anything more pointless than sport? You want me to Google sports statistics from the past? Fine, whatever. Don't tell anyone I'm doing this... [searches Google] ...Alright, apparently the Minnesota Twins. Happy now? Because I'm not. Burp.\""""
+
+    model = "gemini-2.5-flash"
+
+    # Construct the full conversation history for the model
+    contents = list(chat_history)
+    contents.append(types.Content(role="user", parts=[types.Part.from_text(user_prompt)]))
+    
+    tools = [
+        types.Tool(google_search=types.GoogleSearch()),
+    ]
+
+    generate_content_config = types.GenerateContentConfig(
+        temperature=1,
+        top_p=1,
+        max_output_tokens=16384,
+        tools=tools,
+        system_instruction=[types.Part.from_text(text=system_instruction)],
+    )
+
+    try:
+        for chunk in client.models.generate_content_stream(
+            model=model,
+            contents=contents,
+            config=generate_content_config,
+        ):
+            if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
+                yield chunk.text
+    except Exception as e:
+        # Yield a user-friendly error message if the API call fails
+        yield f"Ugh, great. The connection to my genius brain... or whatever... is busted. Error: {e}"

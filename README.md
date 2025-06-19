@@ -118,7 +118,6 @@ gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
 # Setup Python environment and install dependencies
 cd rickbot
 uv venv .venv
-# uv pip install -r requirements.txt
 uv sync
 ```
 
@@ -126,7 +125,7 @@ uv sync
 
 ```bash
 # Local streamlit app
-uv streamlit run app.py --browser.serverAddress=localhost
+uv run -- streamlit run app.py --browser.serverAddress=localhost
 ```
 
 #### Running in a Local Container
