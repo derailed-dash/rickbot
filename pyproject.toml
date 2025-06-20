@@ -3,8 +3,8 @@ name = "rickbot"
 version = "0.1.0"
 description = "A chatbot based on Rick"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
     "streamlit",
-    "google-cloud-aiplatform",
+    "google-genai",
 ]

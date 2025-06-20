@@ -50,10 +50,7 @@ source .env
 
 export PROJECT_NUMBER=$(gcloud projects describe $GOOGLE_CLOUD_PROJECT --format="value(projectNumber)")
 
-# Check we're in the correct project
-gcloud config list project
-
-# If we're on the wrong project...
+# Make sure we're on the right project...
 gcloud config set project $GOOGLE_CLOUD_PROJECT
 gcloud auth application-default set-quota-project $GOOGLE_CLOUD_PROJECT
 gcloud config list project

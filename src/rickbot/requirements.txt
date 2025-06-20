@@ -1,2 +1,2 @@
 streamlit
-google-cloud-aiplatform
+google-genai

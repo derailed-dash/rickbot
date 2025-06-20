@@ -1,5 +1,8 @@
+import logging
+import os
+from functools import lru_cache
 import streamlit as st
-from agent import load_client, get_rick_bot_response, retrieve_env_vars, initialise_logger
+from agent import load_client, get_rick_bot_response
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -10,9 +13,52 @@ st.set_page_config(
 
 APP_NAME = "rickbot"
 
+@st.cache_resource
+@lru_cache
+def initialise_logger(app_name: str, log_level: str):
+    retrieved_logger = logging.getLogger(app_name) 
+    log_level_num = getattr(logging, log_level, logging.INFO) # default to INFO if bad var
+    retrieved_logger.setLevel(log_level_num)
+    
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d:%(name)s - %(levelname)s: %(message)s',
+                                  datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    
+    # Important to prevent duplicate log entries
+    if retrieved_logger.hasHandlers():
+        retrieved_logger.handlers.clear()
+
+    retrieved_logger.addHandler(handler) # Attach the StreamHandler
+
+    retrieved_logger.info("Logger initialised.")
+    retrieved_logger.debug("DEBUG level logging enabled.")
+        
+    return retrieved_logger
+
+@st.cache_resource
+def retrieve_env_vars():
+    """ Retrieve env vars. They could be existing env vars, defined in .env, or defined in .streamlit/config.tom """
+    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT', None)
+    region = os.environ.get('GOOGLE_CLOUD_REGION', None)
+    log_level = os.environ.get('LOG_LEVEL', 'INFO').upper() # default to INFO if not set
+
+    if not project_id:
+        st.error(
+            "🚨 Configuration Error: Cannot determine Project ID."
+        )
+        st.stop()
+        
+    if not region:
+        st.error(
+            "⚠️ Could not determine Google Cloud Region. Using 'global'. "
+        )
+        region = "global"
+        
+    return project_id, region, log_level
+
 gcp_project_id, gcp_region, logging_level = retrieve_env_vars()
 logger = initialise_logger(APP_NAME, logging_level)
-# Leverage st.cache_resource so that we only show these once
 logger.debug(f"{gcp_project_id=}")
 logger.debug(f"{gcp_region=}")
 
@@ -42,7 +88,6 @@ except Exception as e:
     st.error(f"Could not initialize the application. Please check your configuration. Error: {e}")
     st.stop()
 
-
 # Display previous messages from history
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
@@ -60,9 +105,7 @@ if prompt := st.chat_input("What do you want?"):
         # The stream object from the generator
         response_stream = get_rick_bot_response(
             client=client,
-            chat_history=st.session_state.messages[:-1], # Send history, excluding the new user prompt
-            user_prompt=prompt
-        )
+            chat_history=st.session_state.messages)
         # Use st.write_stream to render the response as it comes in
         full_response = st.write_stream(response_stream)
 

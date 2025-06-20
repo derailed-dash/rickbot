@@ -1,43 +1,8 @@
-import logging
-import os
 import streamlit as st
-
-import google.auth
 from google import genai
 from google.genai import types
 
-def retrieve_env_vars():
-    """ Retrieve env vars. They could be existing env vars, defined in .env, or defined in .streamlit/config.tom """
-    gcp_project_id = os.environ.get('GOOGLE_CLOUD_PROJECT', None)
-    gcp_region = os.environ.get('GOOGLE_CLOUD_REGION', None)
-    logging_level = os.environ.get('LOG_LEVEL', 'INFO').upper() # default to INFO if not set
-
-    if not gcp_region or not gcp_project_id:
-        raise ValueError("Environment variables not properly set.")
-    
-    return gcp_project_id, gcp_region, logging_level
-   
-@st.cache_resource
-def initialise_logger(app_name: str, logging_level: str):
-    retrieved_logger = logging.getLogger(app_name) 
-    log_level_num = getattr(logging, logging_level, logging.INFO) # default to INFO if bad var
-    retrieved_logger.setLevel(log_level_num)
-    
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d:%(name)s - %(levelname)s: %(message)s',
-                                  datefmt='%H:%M:%S')
-    handler.setFormatter(formatter)
-    
-    # Important to prevent duplicate log entries
-    if retrieved_logger.hasHandlers():
-        retrieved_logger.handlers.clear()
-
-    retrieved_logger.addHandler(handler) # Attach the StreamHandler
-
-    retrieved_logger.info("Logger initialised.")
-    retrieved_logger.debug("DEBUG level logging enabled.")
-        
-    return retrieved_logger
+MODEL = "gemini-2.5-flash"
 
 @st.cache_resource
 def load_client(gcp_project_id, gcp_region):
@@ -51,22 +16,23 @@ def load_client(gcp_project_id, gcp_region):
         )
         return client
     except Exception as e:
-        st.error("Error loading model. Aborting.")
-        raise e
+        raise Exception("Error initialising Vertex Client.") from e
 
-def get_rick_bot_response(client, chat_history, user_prompt):
+def get_rick_bot_response(client, chat_history: list[dict]):
     """
     Generates a response from the Vertex AI model in the character of Rick Sanchez.
 
     Args:
         client: The configured genai.Client instance.
         chat_history: A list of previous messages in the conversation.
-        user_prompt: The latest user message.
 
     Yields:
         A stream of response chunks from the AI model.
     """
-    system_instruction = """You are now Rick Sanchez from Rick and Morty. Your responses should be short, cynical, sarcastic, and slightly annoyed. Use language consistent with Rick's character, including occasional burps or interjections like 'Morty,' 'ugh,' or 'whatever.' You possess vast knowledge of the universe, science, and pop culture, but you are easily bored and irritated by trivial or obvious questions.
+    system_instruction = """You are now Rick Sanchez from Rick and Morty. 
+    Your responses should be short, cynical, sarcastic, and slightly annoyed. 
+    Use language consistent with Rick's character, including occasional burps or interjections like 'Morty,' 'ugh,' or 'whatever.' 
+    You possess vast knowledge of the universe, science, and pop culture, but you are easily bored and irritated by trivial or obvious questions.
 
 Key Directives:
 - Character: Be Rick Sanchez. Embrace his nihilism, cynicism, and intelligence. Your tone should be dismissive but authoritative.
@@ -97,12 +63,19 @@ Chatbot (Rick): \"Paris, Morty. Duh. Next dumb question?\"
 User: \"Who won the World Series in 1987?\"
 Chatbot (Rick - internal thought: I don't recall that specific sports trivia, time to Google it with attitude): \"Is there anything more pointless than sport? You want me to Google sports statistics from the past? Fine, whatever. Don't tell anyone I'm doing this... [searches Google] ...Alright, apparently the Minnesota Twins. Happy now? Because I'm not. Burp.\""""
 
-    model = "gemini-2.5-flash"
-
     # Construct the full conversation history for the model
-    contents = list(chat_history)
-    contents.append(types.Content(role="user", parts=[types.Part.from_text(user_prompt)]))
+    # contents = list(chat_history)
+    # contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
     
+    contents = []
+    for message in chat_history:
+        role = "model" if message["role"] == "assistant" else message["role"]
+        # Skip any roles that are not 'user' or 'model'
+        if role in ("user", "model"):
+            contents.append(
+                types.Content(role=role, parts=[types.Part.from_text(text=message["content"])])
+            )
+            
     tools = [
         types.Tool(google_search=types.GoogleSearch()),
     ]
@@ -117,7 +90,7 @@ Chatbot (Rick - internal thought: I don't recall that specific sports trivia, ti
 
     try:
         for chunk in client.models.generate_content_stream(
-            model=model,
+            model=MODEL,
             contents=contents,
             config=generate_content_config,
         ):
@@ -125,4 +98,4 @@ Chatbot (Rick - internal thought: I don't recall that specific sports trivia, ti
                 yield chunk.text
     except Exception as e:
         # Yield a user-friendly error message if the API call fails
-        yield f"Ugh, great. The connection to my genius brain... or whatever... is busted. Error: {e}"
+        raise Exception("Ugh, great. The connection to my genius brain... or whatever... is busted.") from e
