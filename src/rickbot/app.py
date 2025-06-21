@@ -92,7 +92,7 @@ with st.sidebar:
     with col2:
         st.image(AVATARS["assistant"], width=160)
     
-    st.info("I'm Rick Sanchez. I'm the smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
+    st.info("I'm Rick Sanchez. The smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
         
     # --- File Uploader ---
     uploaded_file = st.file_uploader(
