@@ -32,6 +32,7 @@ def load_client(gcp_project_id, gcp_region):
     except Exception as e:
         raise Exception("Error initialising Vertex Client.") from e
 
+@lru_cache
 def initialise_model_config() -> GenerateContentConfig:
     """Creates the configuration for the Gemini model. Sets up the system prompt that instructs the model to act as
     Rick. Also configures the model's generation parameters and
@@ -39,7 +40,7 @@ def initialise_model_config() -> GenerateContentConfig:
     knowledge base.
 
     Returns:
-        types.GenerateContentConfig: The configuration object for the model.
+        GenerateContentConfig: The configuration object for the model.
     """
     
     system_instruction = """You are now Rick Sanchez from Rick and Morty. 
@@ -104,7 +105,7 @@ def get_rick_bot_response(client, chat_history: list[dict], model_config: Genera
         client (genai.Client): The authenticated Vertex AI client.
         chat_history (list[dict]): A list of previous messages, where each
             message is a dict with "role" and "content" keys.
-        model_config (types.GenerateContentConfig): The configuration for the
+        model_config (GenerateContentConfig): The configuration for the
             generative model, including the system prompt and tools.
 
     Yields:
@@ -122,7 +123,6 @@ def get_rick_bot_response(client, chat_history: list[dict], model_config: Genera
             if "attachment" in message and message["attachment"]:
                 attachment = message["attachment"]
                 contents.append(Part.from_bytes(data=attachment['data'], mime_type=attachment['mime_type']))
-                # contents.append(Part.from_bytes(data=attachment, mime_type=attachment['mime_type']))
             
     try:
         for chunk in client.models.generate_content_stream(
@@ -133,5 +133,4 @@ def get_rick_bot_response(client, chat_history: list[dict], model_config: Genera
             if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
                 yield chunk.text
     except Exception as e:
-        # Yield a user-friendly error message if the API call fails
-        raise Exception("Ugh, great. The connection to my genius brain... or whatever... is busted.") from e
+        raise Exception("Error in generation") from e

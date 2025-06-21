@@ -82,7 +82,7 @@ st.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
 st.caption("Ask me something. Or don't. Whatever.")
 
 # --- Session State Initialization ---
-# This is crucial for maintaining the conversation history.
+# For maintaining the conversation history.
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -91,7 +91,7 @@ with st.sidebar:
     st.header("Configuration")
     st.info("I'm Rick Sanchez. I'm the smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
     
-    # --- File Uploader and Chat Input ---
+    # --- File Uploader ---
     uploaded_file = st.file_uploader(
         "Upload a file if you want. I'll probably just make fun of it.",
         type=["png", "jpg", "jpeg", "pdf", "mp4", "mov", "webm"]
@@ -149,12 +149,16 @@ if prompt := st.chat_input("What do you want?"):
 
     # Generate and display Rick's response
     with st.chat_message("assistant", avatar=AVATARS["assistant"]):
-        response_stream = get_rick_bot_response(
-            client=client,
-            chat_history=st.session_state.messages,
-            model_config=model_config)
-        # Render the response as it comes in
-        full_response = st.write_stream(response_stream)
-
-    # Add the full bot response to the session state for context in the next turn
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+        try:
+            response_stream = get_rick_bot_response(
+                client=client,
+                chat_history=st.session_state.messages,
+                model_config=model_config)
+            # Render the response as it comes in
+            full_response = st.write_stream(response_stream)
+              
+            # Add the full bot response to the session state for context in the next turn
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
+        except Exception as e:
+            logger.error(e.__cause__)
+            st.error(f"Ugh, great. The connection to my genius brain, or whatever, is busted. Are you even connected right now? Error: {type(e.__cause__)}")
