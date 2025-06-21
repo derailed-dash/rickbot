@@ -138,7 +138,7 @@ docker build -t $SERVICE_NAME:$VERSION .
 # We need to pass environment variables to the container
 # and the Google Application Default Credentials (ADC)
 docker run --rm -p 8080:8080 \
-  -e PROJECT_ID=$GOOGLE_CLOUD_PROJECT -e REGION=$GOOGLE_CLOUD_REGION \
+  -e GOOGLE_CLOUD_PROJECT=$GOOGLE_CLOUD_PROJECT -e GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION \
   -e LOG_LEVEL=$LOG_LEVEL \
   -e GOOGLE_APPLICATION_CREDENTIALS="/app/.config/gcloud/application_default_credentials.json" \
   --mount type=bind,source=${HOME}/.config/gcloud,target=/app/.config/gcloud \
@@ -182,8 +182,23 @@ gcloud run deploy "$SERVICE_NAME" \
   --project=$GOOGLE_CLOUD_PROJECT \
   --ingress all \
   --cpu-boost \
-  --set-env-vars=PROJECT_ID=$GOOGLE_CLOUD_PROJECT,REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL
+  --set-env-vars=GOOGLE_CLOUD_PROJECT=$GOOGLE_CLOUD_PROJECT,GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL
 
 APP_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $GOOGLE_CLOUD_REGION --format="value(status.address.url)")
 echo $APP_URL
+```
+
+#### Setup Custom Domain
+
+```bash
+# If not already done, verify your domain ownership with Google
+gcloud domains verify $DOMAIN
+# Check it
+gcloud domains list-user-verified
+
+# Create a mapping to your domain
+gcloud beta run domain-mappings create \
+  --region $GOOGLE_CLOUD_REGION \
+  --service $SERVICE_NAME \
+  --domain $SERVICE_NAME.$DOMAIN
 ```
