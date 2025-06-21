@@ -1,3 +1,6 @@
+""" A Rick Sanchez (Rick and Morty) Rickbot agent, 
+built using Google Gen AI SDK and Gemini. """
+
 from functools import lru_cache
 from google import genai
 from google.genai import types

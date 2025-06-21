@@ -1,4 +1,4 @@
-""" A Rick Sanchez (Rick and Morty) Rickbot. """
+""" A Rick Sanchez (Rick and Morty) Rickbot, rendered using Streamlit. """
 
 import logging
 import os
@@ -8,9 +8,6 @@ import streamlit as st
 from agent import load_client, get_rick_bot_response, initialise_model_config
 
 APP_NAME = "Rickbot"
-# AVATARS = { "Rick": "media/rick.jpg", "user": "media/morty.jpg" }
-
-# Build robust paths to media assets, independent of the current working directory.
 SCRIPT_DIR = Path(__file__).parent
 AVATARS = {
     "assistant": str(SCRIPT_DIR / "media/rick.jpg"),
