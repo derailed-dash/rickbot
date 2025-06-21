@@ -1,8 +1,11 @@
 [project]
 name = "rickbot"
 version = "0.1.0"
-description = "A chatbot based on Rick"
+description = "A chatbot based on Rick Sanchez from Rick and Morty"
 readme = "README.md"
+authors = [
+  { name = "Darren Lester (Dazbo)" },
+]
 requires-python = ">=3.13"
 dependencies = [
     "streamlit",

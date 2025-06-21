@@ -15,11 +15,11 @@ project/
 ├── src/
 |   └── rickbot/
 |       ├── app.py
-|       ├── Dockerfile
+|       ├── agent.py
 |       ├── requirements.txt
-|       └── utils.py
+|       └── Dockerfile
 |
-├── .env # Local environment variables used in scripts
+├── .env # Local environment variables
 ├── .gitattributes
 ├── .gitignore
 └── README.md            # Project guidance
