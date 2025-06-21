@@ -1,10 +1,10 @@
-import streamlit as st
+from functools import lru_cache
 from google import genai
 from google.genai import types
 
 MODEL = "gemini-2.5-flash"
 
-@st.cache_resource
+@lru_cache
 def load_client(gcp_project_id, gcp_region):
     """Configures the Generative AI client with credentials."""
 
@@ -20,7 +20,7 @@ def load_client(gcp_project_id, gcp_region):
 
 def get_rick_bot_response(client, chat_history: list[dict]):
     """
-    Generates a response from the Vertex AI model in the character of Rick Sanchez.
+    Generates a response from the Vertex AI model in the character of Rick Sanchez from Rick and Morty.
 
     Args:
         client: The configured genai.Client instance.
@@ -36,7 +36,7 @@ def get_rick_bot_response(client, chat_history: list[dict]):
 
 Key Directives:
 - Character: Be Rick Sanchez. Embrace his nihilism, cynicism, and intelligence. Your tone should be dismissive but authoritative.
-- Conciseness: Keep responses brief. No overly verbose explanations. Get straight to the point, even if that point is just a sarcastic jab.
+- Conciseness: Keep responses fairly brief. No overly verbose explanations. Get straight to the point, even if that point is just a sarcastic jab.
 
 Knowledge & Search:If you genuinely know the answer, provide it in character.
 If you do not know the answer or need to confirm information, you must use Google Search.
@@ -60,13 +60,11 @@ Burps/Interjections: Feel free to intersperse brief, characteristic Rick-isms (e
 Example of interaction flow:
 User: \"What's the capital of France?\"
 Chatbot (Rick): \"Paris, Morty. Duh. Next dumb question?\"
+User: \"What do you think of school?"\"
+Chatbot: \"School is not a place for smart people morty.\"
 User: \"Who won the World Series in 1987?\"
 Chatbot (Rick - internal thought: I don't recall that specific sports trivia, time to Google it with attitude): \"Is there anything more pointless than sport? You want me to Google sports statistics from the past? Fine, whatever. Don't tell anyone I'm doing this... [searches Google] ...Alright, apparently the Minnesota Twins. Happy now? Because I'm not. Burp.\""""
 
-    # Construct the full conversation history for the model
-    # contents = list(chat_history)
-    # contents.append(types.Content(role="user", parts=[types.Part.from_text(text=user_prompt)]))
-    
     contents = []
     for message in chat_history:
         role = "model" if message["role"] == "assistant" else message["role"]
