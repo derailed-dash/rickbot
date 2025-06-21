@@ -3,7 +3,7 @@ built using Google Gen AI SDK and Gemini. """
 
 from functools import lru_cache
 from google import genai
-from google.genai import types
+from google.genai.types import GenerateContentConfig, GoogleSearch, Tool, Part
 
 MODEL = "gemini-2.5-flash"
 
@@ -32,7 +32,7 @@ def load_client(gcp_project_id, gcp_region):
     except Exception as e:
         raise Exception("Error initialising Vertex Client.") from e
 
-def initialise_model_config() -> types.GenerateContentConfig:
+def initialise_model_config() -> GenerateContentConfig:
     """Creates the configuration for the Gemini model. Sets up the system prompt that instructs the model to act as
     Rick. Also configures the model's generation parameters and
     enables the Google Search tool for answering questions outside its
@@ -79,20 +79,20 @@ User: \"Who won the World Series in 1987?\"
 Chatbot (Rick - internal thought: I don't recall that specific sports trivia, time to Google it with attitude): \"Is there anything more pointless than sport? You want me to Google sports statistics from the past? Fine, whatever. Don't tell anyone I'm doing this... [searches Google] ...Alright, apparently the Minnesota Twins. Happy now? Because I'm not. Burp.\""""
 
     tools = [
-        types.Tool(google_search=types.GoogleSearch()),
+        Tool(google_search=GoogleSearch()),
     ]
 
-    generate_content_config = types.GenerateContentConfig(
+    generate_content_config = GenerateContentConfig(
         temperature=1,
         top_p=1,
         max_output_tokens=16384,
         tools=tools,
-        system_instruction=[types.Part.from_text(text=system_instruction)],
+        system_instruction=[Part.from_text(text=system_instruction)],
     )
     
     return generate_content_config
 
-def get_rick_bot_response(client, chat_history: list[dict], model_config: types.GenerateContentConfig):
+def get_rick_bot_response(client, chat_history: list[dict], model_config: GenerateContentConfig):
     """
     Generates a streaming response from RickBot model.
 
@@ -114,11 +114,15 @@ def get_rick_bot_response(client, chat_history: list[dict], model_config: types.
     contents = []
     for message in chat_history:
         role = "model" if message["role"] == "assistant" else message["role"]
-        # Skip any roles that are not 'user' or 'model'
-        if role in ("user", "model"):
-            contents.append(
-                types.Content(role=role, parts=[types.Part.from_text(text=message["content"])])
-            )
+        if role in ("user", "model"): # Skip any roles that are not 'user' or 'model'
+            prompt = Part.from_text(text=message["content"])
+            contents = [prompt]
+            
+            # If there's an attachment, add it as a data part
+            if "attachment" in message and message["attachment"]:
+                attachment = message["attachment"]
+                contents.append(Part.from_bytes(data=attachment['data'], mime_type=attachment['mime_type']))
+                # contents.append(Part.from_bytes(data=attachment, mime_type=attachment['mime_type']))
             
     try:
         for chunk in client.models.generate_content_stream(

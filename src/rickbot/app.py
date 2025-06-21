@@ -4,6 +4,7 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 import streamlit as st
 from agent import load_client, get_rick_bot_response, initialise_model_config
 
@@ -89,6 +90,13 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("Configuration")
     st.info("I'm Rick Sanchez. I'm the smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
+    
+    # --- File Uploader and Chat Input ---
+    uploaded_file = st.file_uploader(
+        "Upload a file if you want. I'll probably just make fun of it.",
+        type=["png", "jpg", "jpeg", "pdf", "mp4", "mov", "webm"]
+    )
+    
     if st.button("Clear Chat History"):
         st.session_state.messages = []
         st.rerun()
@@ -107,23 +115,45 @@ except Exception as e:
 # Display previous messages from history
 for message in st.session_state.messages:
     with st.chat_message(message["role"], avatar=AVATARS[message["role"]]):
+        # Render any attachments first
+        if "attachment" in message and message["attachment"]:
+            attachment = message["attachment"]
+            if "image" in attachment["mime_type"]:
+                st.image(attachment["data"])
+            elif "video" in attachment["mime_type"]:
+                st.video(attachment["data"])
+            # You could add more handlers here for PDFs, etc.
+        
         st.markdown(message["content"])
 
 # Handle new user input
 if prompt := st.chat_input("What do you want?"):
-    # Add user message to session state and display it
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user", avatar=AVATARS["user"]):
+    # Create the user message object, including any attachments
+    user_message: dict[str, Any] = {"role": "user", "content": prompt}
+    if uploaded_file:
+        user_message["attachment"] = {
+            "data": uploaded_file.getvalue(),
+            "mime_type": uploaded_file.type or "",
+        }
+    st.session_state.messages.append(user_message)
+
+    # Display the user's message and attachment in the chat
+    with st.chat_message("user", avatar=AVATARS.get("user")):
+        if uploaded_file:
+            mime_type = uploaded_file.type or ""
+            if "image" in mime_type:
+                st.image(uploaded_file)
+            elif "video" in mime_type:
+                st.video(uploaded_file)
         st.markdown(prompt)
 
     # Generate and display Rick's response
     with st.chat_message("assistant", avatar=AVATARS["assistant"]):
-        # The stream object from the generator
         response_stream = get_rick_bot_response(
             client=client,
             chat_history=st.session_state.messages,
             model_config=model_config)
-        # Use st.write_stream to render the response as it comes in
+        # Render the response as it comes in
         full_response = st.write_stream(response_stream)
 
     # Add the full bot response to the session state for context in the next turn
