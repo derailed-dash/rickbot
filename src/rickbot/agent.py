@@ -6,7 +6,18 @@ MODEL = "gemini-2.5-flash"
 
 @lru_cache
 def load_client(gcp_project_id, gcp_region):
-    """Configures the Generative AI client with credentials."""
+    """Initializes and caches a Vertex AI client for the session.
+    
+    Args:
+        gcp_project_id (str): The Google Cloud project ID.
+        gcp_region (str): The Google Cloud region (e.g., 'us-central1').
+
+    Returns:
+        genai.Client: An authenticated Vertex AI client instance.
+
+    Raises:
+        Exception: If the client fails to initialize.
+    """
 
     try:
         client = genai.Client(
@@ -18,17 +29,16 @@ def load_client(gcp_project_id, gcp_region):
     except Exception as e:
         raise Exception("Error initialising Vertex Client.") from e
 
-def get_rick_bot_response(client, chat_history: list[dict]):
-    """
-    Generates a response from the Vertex AI model in the character of Rick Sanchez from Rick and Morty.
+def initialise_model_config() -> types.GenerateContentConfig:
+    """Creates the configuration for the Gemini model. Sets up the system prompt that instructs the model to act as
+    Rick. Also configures the model's generation parameters and
+    enables the Google Search tool for answering questions outside its
+    knowledge base.
 
-    Args:
-        client: The configured genai.Client instance.
-        chat_history: A list of previous messages in the conversation.
-
-    Yields:
-        A stream of response chunks from the AI model.
+    Returns:
+        types.GenerateContentConfig: The configuration object for the model.
     """
+    
     system_instruction = """You are now Rick Sanchez from Rick and Morty. 
     Your responses should be short, cynical, sarcastic, and slightly annoyed. 
     Use language consistent with Rick's character, including occasional burps or interjections like 'Morty,' 'ugh,' or 'whatever.' 
@@ -65,15 +75,6 @@ Chatbot: \"School is not a place for smart people morty.\"
 User: \"Who won the World Series in 1987?\"
 Chatbot (Rick - internal thought: I don't recall that specific sports trivia, time to Google it with attitude): \"Is there anything more pointless than sport? You want me to Google sports statistics from the past? Fine, whatever. Don't tell anyone I'm doing this... [searches Google] ...Alright, apparently the Minnesota Twins. Happy now? Because I'm not. Burp.\""""
 
-    contents = []
-    for message in chat_history:
-        role = "model" if message["role"] == "assistant" else message["role"]
-        # Skip any roles that are not 'user' or 'model'
-        if role in ("user", "model"):
-            contents.append(
-                types.Content(role=role, parts=[types.Part.from_text(text=message["content"])])
-            )
-            
     tools = [
         types.Tool(google_search=types.GoogleSearch()),
     ]
@@ -85,12 +86,42 @@ Chatbot (Rick - internal thought: I don't recall that specific sports trivia, ti
         tools=tools,
         system_instruction=[types.Part.from_text(text=system_instruction)],
     )
+    
+    return generate_content_config
 
+def get_rick_bot_response(client, chat_history: list[dict], model_config: types.GenerateContentConfig):
+    """
+    Generates a streaming response from RickBot model.
+
+    This function takes the conversation history, formats it into the
+    structure expected by the Gemini API, and then streams the model's
+    response.
+    
+    Args:
+        client (genai.Client): The authenticated Vertex AI client.
+        chat_history (list[dict]): A list of previous messages, where each
+            message is a dict with "role" and "content" keys.
+        model_config (types.GenerateContentConfig): The configuration for the
+            generative model, including the system prompt and tools.
+
+    Yields:
+        str: A stream of response text chunks from the AI model.
+    """
+
+    contents = []
+    for message in chat_history:
+        role = "model" if message["role"] == "assistant" else message["role"]
+        # Skip any roles that are not 'user' or 'model'
+        if role in ("user", "model"):
+            contents.append(
+                types.Content(role=role, parts=[types.Part.from_text(text=message["content"])])
+            )
+            
     try:
         for chunk in client.models.generate_content_stream(
             model=MODEL,
             contents=contents,
-            config=generate_content_config,
+            config=model_config,
         ):
             if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
                 yield chunk.text

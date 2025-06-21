@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import streamlit as st
-from agent import load_client, get_rick_bot_response
+from agent import load_client, get_rick_bot_response, initialise_model_config
 
 APP_NAME = "Rickbot"
 # AVATARS = { "Rick": "media/rick.jpg", "user": "media/morty.jpg" }
@@ -101,6 +101,7 @@ with st.sidebar:
 # Initialize the AI client
 try:
     client = load_client(config.project_id, config.region)
+    model_config = initialise_model_config()
 except Exception as e:
     logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
     st.error(f"Could not initialize the application. Please check your configuration. Error: {e}")
@@ -123,7 +124,8 @@ if prompt := st.chat_input("What do you want?"):
         # The stream object from the generator
         response_stream = get_rick_bot_response(
             client=client,
-            chat_history=st.session_state.messages)
+            chat_history=st.session_state.messages,
+            model_config=model_config)
         # Use st.write_stream to render the response as it comes in
         full_response = st.write_stream(response_stream)
 
