@@ -88,9 +88,12 @@ if "messages" not in st.session_state:
 
 # --- Sidebar for Configuration ---
 with st.sidebar:
-    st.header("Configuration")
-    st.info("I'm Rick Sanchez. I'm the smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        st.image(AVATARS["assistant"], width=160)
     
+    st.info("I'm Rick Sanchez. I'm the smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
+        
     # --- File Uploader ---
     uploaded_file = st.file_uploader(
         "Upload a file if you want. I'll probably just make fun of it.",
