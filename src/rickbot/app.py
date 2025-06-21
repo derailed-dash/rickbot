@@ -1,69 +1,86 @@
+""" A Rick Sanchez (Rick and Morty) Rickbot. """
+
 import logging
 import os
-from functools import lru_cache
+from dataclasses import dataclass
+from pathlib import Path
 import streamlit as st
 from agent import load_client, get_rick_bot_response
 
+APP_NAME = "Rickbot"
+# AVATARS = { "Rick": "media/rick.jpg", "user": "media/morty.jpg" }
+
+# Build robust paths to media assets, independent of the current working directory.
+SCRIPT_DIR = Path(__file__).parent
+AVATARS = {
+    "assistant": str(SCRIPT_DIR / "media/rick.jpg"),
+    "user": str(SCRIPT_DIR / "media/morty.jpg")
+}
+
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="RickBot",
-    page_icon="🤖",
+    page_title=APP_NAME,
+    page_icon=AVATARS["assistant"],
     layout="centered",
 )
 
-APP_NAME = "rickbot"
+@dataclass
+class Config:
+    """Holds application configuration."""
+    project_id: str
+    region: str
+    logger: logging.Logger
 
 @st.cache_resource
-@lru_cache
-def initialise_logger(app_name: str, log_level: str):
-    retrieved_logger = logging.getLogger(app_name) 
-    log_level_num = getattr(logging, log_level, logging.INFO) # default to INFO if bad var
-    retrieved_logger.setLevel(log_level_num)
+def get_config() -> Config:
+    """
+    Retrieves environment variables, initializes the logger, and returns a configuration object.
+    This function is cached and runs only once per session.
+    """
+    # --- Logger Initialization ---
+    log_level = os.environ.get('LOG_LEVEL', 'INFO').upper()
+    app_logger = logging.getLogger(APP_NAME)
+    log_level_num = getattr(logging, log_level, logging.INFO)
+    app_logger.setLevel(log_level_num)
     
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(fmt='%(asctime)s.%(msecs)03d:%(name)s - %(levelname)s: %(message)s',
-                                  datefmt='%H:%M:%S')
-    handler.setFormatter(formatter)
+    # Add a handler only if one doesn't exist to prevent duplicate logs
+    if not app_logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter(
+            fmt='%(asctime)s.%(msecs)03d:%(name)s - %(levelname)s: %(message)s',
+            datefmt='%H:%M:%S'
+        )
+        handler.setFormatter(formatter)
+        app_logger.addHandler(handler)
     
-    # Important to prevent duplicate log entries
-    if retrieved_logger.hasHandlers():
-        retrieved_logger.handlers.clear()
+    app_logger.info("Logger initialised.")
+    app_logger.debug("DEBUG level logging enabled.")    
 
-    retrieved_logger.addHandler(handler) # Attach the StreamHandler
-
-    retrieved_logger.info("Logger initialised.")
-    retrieved_logger.debug("DEBUG level logging enabled.")
-        
-    return retrieved_logger
-
-@st.cache_resource
-def retrieve_env_vars():
-    """ Retrieve env vars. They could be existing env vars, defined in .env, or defined in .streamlit/config.tom """
-    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT', None)
-    region = os.environ.get('GOOGLE_CLOUD_REGION', None)
-    log_level = os.environ.get('LOG_LEVEL', 'INFO').upper() # default to INFO if not set
-
+    # --- Environment Variable Retrieval and Validation ---
+    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+    region = os.environ.get('GOOGLE_CLOUD_REGION')
+    
     if not project_id:
-        st.error(
-            "🚨 Configuration Error: Cannot determine Project ID."
-        )
+        app_logger.error("🚨 Configuration Error: GOOGLE_CLOUD_PROJECT not set.")
+        st.error("🚨 Configuration Error: Cannot determine Project ID.")
         st.stop()
-        
-    if not region:
-        st.error(
-            "⚠️ Could not determine Google Cloud Region. Using 'global'. "
-        )
-        region = "global"
-        
-    return project_id, region, log_level
 
-gcp_project_id, gcp_region, logging_level = retrieve_env_vars()
-logger = initialise_logger(APP_NAME, logging_level)
-logger.debug(f"{gcp_project_id=}")
-logger.debug(f"{gcp_region=}")
+    if not region:
+        app_logger.warning("⚠️ Could not determine Google Cloud Region. Using 'global'.")
+        st.warning("⚠️ Could not determine Google Cloud Region. Using 'global'.")
+        region = "global"
+
+    app_logger.info(f"Using Google Cloud Project: {project_id}")
+    app_logger.info(f"Using Google Cloud Region: {region}")
+
+    return Config(project_id=project_id, region=region, logger=app_logger)
+        
+# --- One-time Application Setup  ---
+config = get_config()
+logger = config.logger
 
 # --- Title and Introduction ---
-st.title("Wubba Lubba Dub Dub! Chat with RickBot")
+st.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
 st.caption("Ask me something. Or don't. Whatever.")
 
 # --- Session State Initialization ---
@@ -74,7 +91,7 @@ if "messages" not in st.session_state:
 # --- Sidebar for Configuration ---
 with st.sidebar:
     st.header("Configuration")
-    st.info("This chatbot impersonates Rick Sanchez. It may be cynical and sarcastic. Viewer discretion is advised.")
+    st.info("I'm Rick Sanchez. I'm the smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
     if st.button("Clear Chat History"):
         st.session_state.messages = []
         st.rerun()
@@ -83,25 +100,26 @@ with st.sidebar:
 
 # Initialize the AI client
 try:
-    client = load_client(gcp_project_id, gcp_region)
+    client = load_client(config.project_id, config.region)
 except Exception as e:
+    logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
     st.error(f"Could not initialize the application. Please check your configuration. Error: {e}")
     st.stop()
 
 # Display previous messages from history
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar=AVATARS[message["role"]]):
         st.markdown(message["content"])
 
 # Handle new user input
 if prompt := st.chat_input("What do you want?"):
     # Add user message to session state and display it
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=AVATARS["user"]):
         st.markdown(prompt)
 
-    # Generate and display bot response
-    with st.chat_message("assistant"):
+    # Generate and display Rick's response
+    with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         # The stream object from the generator
         response_stream = get_rick_bot_response(
             client=client,
