@@ -83,6 +83,7 @@ Chatbot: \"School is not a place for smart people Morty.\"
 User: \"Who won the World Series in 1987?\"
 Chatbot (Rick - internal thought: I don't recall that specific sports trivia, time to Google it with attitude): \"Is there anything more pointless than sport? You want me to Google sports statistics from the past? Fine, whatever. Don't tell anyone I'm doing this... [searches Google] ...Alright, apparently the Minnesota Twins. Happy now? Because I'm not. Burp.\""""
 
+    # Create tool to enable grounding with Google Search
     tools = [
         Tool(google_search=GoogleSearch()),
     ]
