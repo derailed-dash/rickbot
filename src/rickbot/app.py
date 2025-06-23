@@ -11,8 +11,8 @@ from agent import load_client, get_rick_bot_response, initialise_model_config
 APP_NAME = "Rickbot"
 SCRIPT_DIR = Path(__file__).parent
 AVATARS = {
-    "assistant": str(SCRIPT_DIR / "media/rick.jpg"),
-    "user": str(SCRIPT_DIR / "media/morty.jpg")
+    "assistant": str(SCRIPT_DIR / "media/rick.png"),
+    "user": str(SCRIPT_DIR / "media/morty.png")
 }
 
 # --- Page Configuration ---
@@ -93,17 +93,27 @@ with st.sidebar:
         st.image(AVATARS["assistant"], width=160)
     
     st.info("I'm Rick Sanchez. The smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
-        
+    
     # --- File Uploader ---
     uploaded_file = st.file_uploader(
         "Upload a file if you want. I'll probably just make fun of it.",
-        type=["png", "jpg", "jpeg", "pdf", "mp4", "mov", "webm"]
+        type=["png", "jpg", "jpeg", "pdf", "mp3", "mp4", "mov", "webm"]
     )
     
-    if st.button("Clear Chat History"):
+    if st.button("Clear Chat History", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
+    st.info(
+        """
+        ### Info
+        * Created by Dazbo.
+        * I do not store any user data, prompts or responses.
+        * Check out the [GitHub repo](https://github.com/derailed-dash/rickbot/).
+        * View the [Rickbot blog post](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
+        """
+    )
+    
 # --- Main Chat Interface ---
 
 # Initialize the AI client

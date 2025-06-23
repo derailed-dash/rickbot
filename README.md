@@ -6,7 +6,11 @@ Author: Darren Lester
 
 ## Repo Overview
 
-TBC.
+_Rickbot_ is a chatbot that behaves like Rick Sanchez from Rick and Morty.
+
+It has been created using Google Gemini, and is grounded with Google Search. The application demo is deployed to Google Cloud Run.
+
+See the companion article [here](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
 
 ## Repo Structure
 
@@ -14,12 +18,13 @@ TBC.
 project/
 ├── src/
 |   └── rickbot/
+|       |   └── media/
 |       ├── app.py
 |       ├── agent.py
 |       ├── requirements.txt
 |       └── Dockerfile
 |
-├── .env # Local environment variables
+├── .env
 ├── .gitattributes
 ├── .gitignore
 └── README.md            # Project guidance
