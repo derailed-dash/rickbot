@@ -79,101 +79,116 @@ logger = config.logger
 
 # --- Title and Introduction ---
 st.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
-st.caption("Ask me something. Or don't. Whatever.")
 
-# --- Session State Initialization ---
-# For maintaining the conversation history.
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+def do_rick():
+    st.caption("Ask me something. Or don't. Whatever.")
 
-# --- Sidebar for Configuration ---
-with st.sidebar:
-    col1, col2, col3 = st.columns([1,2,1])
-    with col2:
-        st.image(AVATARS["assistant"], width=160)
-    
-    st.info("I'm Rick Sanchez. The smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
-    
-    # --- File Uploader ---
-    uploaded_file = st.file_uploader(
-        "Upload a file if you want. I'll probably just make fun of it.",
-        type=["png", "jpg", "jpeg", "pdf", "mp3", "mp4", "mov", "webm"]
-    )
-    
-    if st.button("Clear Chat History", use_container_width=True):
+    # --- Session State Initialization ---
+    # For maintaining the conversation history.
+    if "messages" not in st.session_state:
         st.session_state.messages = []
-        st.rerun()
 
-    st.info(
-        """
-        ### Info
-        * Created by Dazbo.
-        * I do not store any user data, prompts or responses.
-        * Check out the [GitHub repo](https://github.com/derailed-dash/rickbot/).
-        * View the [Rickbot blog post](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
-        """
-    )
-    
-# --- Main Chat Interface ---
-
-# Initialize the AI client
-try:
-    client = load_client(config.project_id, config.region)
-    model_config = initialise_model_config()
-except Exception as e:
-    logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
-    st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
-    st.stop()
-
-# Display previous messages from history
-for message in st.session_state.messages:
-    with st.chat_message(message["role"], avatar=AVATARS[message["role"]]):
-        # Render any attachments first
-        if "attachment" in message and message["attachment"]:
-            attachment = message["attachment"]
-            if "image" in attachment["mime_type"]:
-                st.image(attachment["data"])
-            elif "video" in attachment["mime_type"]:
-                st.video(attachment["data"])
-            # You could add more handlers here for PDFs, etc.
+    # --- Sidebar for Configuration ---
+    with st.sidebar:
+        st.caption(f"Welcome, {st.user.name}")
+        st.button("Log out", on_click=st.logout)
+        st.divider()
         
-        st.markdown(message["content"])
+        _, col2, _ = st.columns([1,2,1])
+        with col2:
+            st.image(AVATARS["assistant"], width=160)
+        
+        st.info("I'm Rick Sanchez. The smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
+        
+        # --- File Uploader ---
+        uploaded_file = st.file_uploader(
+            "Upload a file if you want. I'll probably just make fun of it.",
+            type=["png", "jpg", "jpeg", "pdf", "mp3", "mp4", "mov", "webm"]
+        )
+        
+        if st.button("Clear Chat History", use_container_width=True):
+            st.session_state.messages = []
+            st.rerun()
+            
+        st.info(
+            """
+            ### Info
+            * Created by Dazbo.
+            * I do not store any user data, prompts or responses.
+            * Check out the [GitHub repo](https://github.com/derailed-dash/rickbot/).
+            * View the [Rickbot blog post](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
+            """
+        )
+        
+    # --- Main Chat Interface ---
 
-# Handle new user input
-if prompt := st.chat_input("What do you want?"):
-    # Create the user message object, including any attachments
-    user_message: dict[str, Any] = {"role": "user", "content": prompt}
-    if uploaded_file:
-        user_message["attachment"] = {
-            "data": uploaded_file.getvalue(),
-            "mime_type": uploaded_file.type or "",
-        }
-    st.session_state.messages.append(user_message)
+    # Initialize the AI client
+    try:
+        client = load_client(config.project_id, config.region)
+        model_config = initialise_model_config()
+    except Exception as e:
+        logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
+        st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
+        st.stop()
 
-    # Display the user's message and attachment in the chat
-    with st.chat_message("user", avatar=AVATARS.get("user")):
+    # Display previous messages from history
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"], avatar=AVATARS[message["role"]]):
+            # Render any attachments first
+            if "attachment" in message and message["attachment"]:
+                attachment = message["attachment"]
+                if "image" in attachment["mime_type"]:
+                    st.image(attachment["data"])
+                elif "video" in attachment["mime_type"]:
+                    st.video(attachment["data"])
+                # You could add more handlers here for PDFs, etc.
+            
+            st.markdown(message["content"])
+
+    # Handle new user input
+    if prompt := st.chat_input("What do you want?"):
+        # Create the user message object, including any attachments
+        user_message: dict[str, Any] = {"role": "user", "content": prompt}
         if uploaded_file:
-            mime_type = uploaded_file.type or ""
-            if "image" in mime_type:
-                st.image(uploaded_file)
-            elif "video" in mime_type:
-                st.video(uploaded_file)
-        st.markdown(prompt)
+            user_message["attachment"] = {
+                "data": uploaded_file.getvalue(),
+                "mime_type": uploaded_file.type or "",
+            }
+        st.session_state.messages.append(user_message)
 
-    # Generate and display Rick's response
-    with st.status("Thinking...", expanded=True) as status:
-        with st.chat_message("assistant", avatar=AVATARS["assistant"]):
-            try:
-                response_stream = get_rick_bot_response(
-                    client=client,
-                    chat_history=st.session_state.messages,
-                    model_config=model_config)
-                # Render the response as it comes in
-                full_response = st.write_stream(response_stream)
-                status.update(label="Done.", state="complete")
-                
-                # Add the full bot response to the session state for context in the next turn
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
-            except Exception as e:
-                logger.error(e.__cause__)
-                st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
+        # Display the user's message and attachment in the chat
+        with st.chat_message("user", avatar=AVATARS.get("user")):
+            if uploaded_file:
+                mime_type = uploaded_file.type or ""
+                if "image" in mime_type:
+                    st.image(uploaded_file)
+                elif "video" in mime_type:
+                    st.video(uploaded_file)
+            st.markdown(prompt)
+
+        # Generate and display Rick's response
+        with st.status("Thinking...", expanded=True) as bot_status:
+            with st.chat_message("assistant", avatar=AVATARS["assistant"]):
+                try:
+                    response_stream = get_rick_bot_response(
+                        client=client,
+                        chat_history=st.session_state.messages,
+                        model_config=model_config)
+                    # Render the response as it comes in
+                    full_response = st.write_stream(response_stream)
+                    bot_status.update(label="Done.", state="complete")
+                    
+                    # Add the full bot response to the session state for context in the next turn
+                    st.session_state.messages.append({"role": "assistant", "content": full_response})
+                except Exception as e:
+                    logger.error(e.__cause__)
+                    st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
+
+# Login with Google OAuth
+if not st.user.is_logged_in:
+    login_left, login_right = st.columns([0.25, 0.75])
+    if login_left.button("Log in with Google", ):
+        st.login()
+    login_right.markdown(":sunglasses: Please login to use Rickbot. Any Google account will do.")
+else:
+    do_rick()
