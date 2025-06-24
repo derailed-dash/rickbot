@@ -207,3 +207,7 @@ gcloud beta run domain-mappings create \
   --service $SERVICE_NAME \
   --domain $SERVICE_NAME.$DOMAIN
 ```
+
+### CI/CD
+
+CI/CD is achieved using Google Cloud Build, with the configuration in `deploy/cloudbuild.yaml`. 
