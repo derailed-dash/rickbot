@@ -38,6 +38,7 @@ coverage.xml
 # secrets
 *.key
 .gitsecret/keys/random_seed
+secrets.toml
 
 # Terraform
 *.tfstate
