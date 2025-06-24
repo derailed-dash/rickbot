@@ -30,7 +30,6 @@ steps:
   # or updates it with the new image if it does.
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     args:
-      - beta
       - run
       - deploy
       - $_SERVICE_NAME
@@ -42,6 +41,7 @@ steps:
       - '--region=$_DEPLOY_REGION'
       - '--allow-unauthenticated'
       - '--max-instances=$_MAX_INSTANCES' # Limit the number of instances to 1
+      - '--cpu-boost'
       - '--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_REGION=$_DEPLOY_REGION,LOG_LEVEL=$_LOG_LEVEL'
       - '--quiet'
     id: Deploy
@@ -59,6 +59,7 @@ substitutions:
   _DEPLOY_REGION: europe-west4
   _LOG_LEVEL: INFO
   _MAX_INSTANCES: "1"
+  _SVC_ACCOUNT: rickbot-sa@$_AR_PROJECT_ID.iam.gserviceaccount.com
   _AR_HOSTNAME: europe-west4-docker.pkg.dev
   _AR_REPOSITORY: cloud-run-source-deploy
   _AR_PROJECT_ID: rickbot-463118
