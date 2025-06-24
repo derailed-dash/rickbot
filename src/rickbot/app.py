@@ -59,12 +59,12 @@ def get_config() -> Config:
     region = os.environ.get('GOOGLE_CLOUD_REGION')
     
     if not project_id:
-        app_logger.error("🚨 Configuration Error: GOOGLE_CLOUD_PROJECT not set.")
+        app_logger.error("Configuration Error: GOOGLE_CLOUD_PROJECT not set.")
         st.error("🚨 Configuration Error: Cannot determine Project ID.")
         st.stop()
 
     if not region:
-        app_logger.warning("⚠️ Could not determine Google Cloud Region. Using 'global'.")
+        app_logger.warning("Could not determine Google Cloud Region. Using 'global'.")
         st.warning("⚠️ Could not determine Google Cloud Region. Using 'global'.")
         region = "global"
 
@@ -122,7 +122,7 @@ try:
     model_config = initialise_model_config()
 except Exception as e:
     logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
-    st.error(f"Could not initialize the application. Please check your configuration. Error: {e}")
+    st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
     st.stop()
 
 # Display previous messages from history
@@ -161,17 +161,19 @@ if prompt := st.chat_input("What do you want?"):
         st.markdown(prompt)
 
     # Generate and display Rick's response
-    with st.chat_message("assistant", avatar=AVATARS["assistant"]):
-        try:
-            response_stream = get_rick_bot_response(
-                client=client,
-                chat_history=st.session_state.messages,
-                model_config=model_config)
-            # Render the response as it comes in
-            full_response = st.write_stream(response_stream)
-              
-            # Add the full bot response to the session state for context in the next turn
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-        except Exception as e:
-            logger.error(e.__cause__)
-            st.error(f"Ugh, great. The connection to my genius brain, or whatever, is busted. Are you even connected right now? Error: {type(e.__cause__)}")
+    with st.status("Thinking...", expanded=True) as status:
+        with st.chat_message("assistant", avatar=AVATARS["assistant"]):
+            try:
+                response_stream = get_rick_bot_response(
+                    client=client,
+                    chat_history=st.session_state.messages,
+                    model_config=model_config)
+                # Render the response as it comes in
+                full_response = st.write_stream(response_stream)
+                status.update(label="Done.", state="complete")
+                
+                # Add the full bot response to the session state for context in the next turn
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except Exception as e:
+                logger.error(e.__cause__)
+                st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
