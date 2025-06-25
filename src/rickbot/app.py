@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 import streamlit as st
 from agent import load_client, get_rick_bot_response, initialise_model_config
+from rickbot.create_auth_secrets import create_secrets_toml
 
 APP_NAME = "Rickbot"
 SCRIPT_DIR = Path(__file__).parent
@@ -191,12 +192,12 @@ def do_rick():
 # Login with Google OAuth
 if config.auth_required:
     # If we want to create the secrets.toml in the app code...
-    # try:
-    #     create_secrets_toml(config.project_id)
-    # except ValueError as e:
-    #     logger.error(f"Failed to setup auth: {e}", exc_info=True)
-    #     st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
-    #     st.stop()
+    try:
+        create_secrets_toml(config.project_id)
+    except ValueError as e:
+        logger.error(f"Failed to setup auth: {e}", exc_info=True)
+        st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
+        st.stop()
         
     if not st.user.is_logged_in:
         _, mid, _ = st.columns([0.2, 0.6, 0.2])
