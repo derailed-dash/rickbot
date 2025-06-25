@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 import streamlit as st
 from agent import load_client, get_rick_bot_response, initialise_model_config
-from rickbot.create_auth_secrets import create_secrets_toml
+from create_auth_secrets import create_secrets_toml
 
 APP_NAME = "Rickbot"
 SCRIPT_DIR = Path(__file__).parent
