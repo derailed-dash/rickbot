@@ -127,6 +127,7 @@ uv sync
 
 ```bash
 # Local streamlit app
+# Run from your project/src/rickbot directory
 uv run -- streamlit run app.py --browser.serverAddress=localhost
 ```
 

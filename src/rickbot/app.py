@@ -28,6 +28,7 @@ class Config:
     project_id: str
     region: str
     logger: logging.Logger
+    auth_required: bool # Whether we require logon
 
 @st.cache_resource
 def get_config() -> Config:
@@ -57,6 +58,7 @@ def get_config() -> Config:
     # --- Environment Variable Retrieval and Validation ---
     project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
     region = os.environ.get('GOOGLE_CLOUD_REGION')
+    auth_required = os.environ.get("AUTH_REQUIRED", "True").lower() == "true"
     
     if not project_id:
         app_logger.error("Configuration Error: GOOGLE_CLOUD_PROJECT not set.")
@@ -70,15 +72,21 @@ def get_config() -> Config:
 
     app_logger.info(f"Using Google Cloud Project: {project_id}")
     app_logger.info(f"Using Google Cloud Region: {region}")
+    app_logger.info(f"Auth required: {auth_required}")
 
-    return Config(project_id=project_id, region=region, logger=app_logger)
+    return Config(project_id=project_id, 
+                  region=region, 
+                  logger=app_logger, 
+                  auth_required=auth_required)
         
 # --- One-time Application Setup  ---
 config = get_config()
 logger = config.logger
 
 # --- Title and Introduction ---
-st.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
+header_col1, header_col2 = st.columns([0.3, 0.7])
+header_col1.image(AVATARS["assistant"], width=160)
+header_col2.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
 
 def do_rick():
     st.caption("Ask me something. Or don't. Whatever.")
@@ -90,13 +98,9 @@ def do_rick():
 
     # --- Sidebar for Configuration ---
     with st.sidebar:
-        st.caption(f"Welcome, {st.user.name}")
-        st.button("Log out", on_click=st.logout)
-        st.divider()
-        
-        _, col2, _ = st.columns([1,2,1])
-        with col2:
-            st.image(AVATARS["assistant"], width=160)
+        if config.auth_required and st.user.is_logged_in:
+            st.caption(f"Welcome, {st.user.name}")
+            st.button("Log out", on_click=st.logout)
         
         st.info("I'm Rick Sanchez. The smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
         
@@ -185,10 +189,11 @@ def do_rick():
                     st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
 
 # Login with Google OAuth
-if not st.user.is_logged_in:
-    login_left, login_right = st.columns([0.25, 0.75])
-    if login_left.button("Log in with Google", ):
-        st.login()
-    login_right.markdown(":sunglasses: Please login to use Rickbot. Any Google account will do.")
+if config.auth_required and not st.user.is_logged_in:
+    _, mid, _ = st.columns([0.2, 0.6, 0.2])
+    with mid:
+        st.markdown(":sunglasses: Please login to use Rickbot. Any Google account will do.")
+        if st.button("Log in with Google", use_container_width=True):
+            st.login()
 else:
     do_rick()
