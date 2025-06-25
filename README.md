@@ -87,6 +87,11 @@ gcloud services enable \
 # Create the rickbot service account
 gcloud iam service-accounts create $RICKBOT_SA
 
+# To allow the SA to run Cloud run services
+gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+  --member="serviceAccount:$RICKBOT_SA_EMAIL" \
+  --role="roles/run.admin"
+
 # To provide access to Gemini AI services
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
   --member="serviceAccount:$RICKBOT_SA_EMAIL" \
