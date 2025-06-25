@@ -189,11 +189,20 @@ def do_rick():
                     st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
 
 # Login with Google OAuth
-if config.auth_required and not st.user.is_logged_in:
-    _, mid, _ = st.columns([0.2, 0.6, 0.2])
-    with mid:
-        st.markdown(":sunglasses: Please login to use Rickbot. Any Google account will do.")
-        if st.button("Log in with Google", use_container_width=True):
-            st.login()
+if config.auth_required:
+    # If we want to create the secrets.toml in the app code...
+    # try:
+    #     create_secrets_toml(config.project_id)
+    # except ValueError as e:
+    #     logger.error(f"Failed to setup auth: {e}", exc_info=True)
+    #     st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
+    #     st.stop()
+        
+    if not st.user.is_logged_in:
+        _, mid, _ = st.columns([0.2, 0.6, 0.2])
+        with mid:
+            st.markdown(":sunglasses: Please login to use Rickbot. Any Google account will do.")
+            if st.button("Log in with Google", use_container_width=True):
+                st.login()
 else:
     do_rick()

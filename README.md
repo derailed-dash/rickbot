@@ -16,12 +16,17 @@ See the companion article [here](https://medium.com/google-cloud/creating-a-rick
 
 ```text
 project/
+├── deploy/
+|   └── cloudbuild.yaml     # Cloud Build config 
+|
 ├── src/
 |   └── rickbot/
-|       |   └── media/
+|       |   └── .streamlit/ # For Streamlit configuration
+|       |   └── media/      # E.g. avatar images
 |       ├── app.py
 |       ├── agent.py
 |       ├── requirements.txt
+|       ├── .dockerignore   # Exclude files from container image
 |       └── Dockerfile
 |
 ├── .env
@@ -82,9 +87,15 @@ gcloud services enable \
 # Create the rickbot service account
 gcloud iam service-accounts create $RICKBOT_SA
 
+# To provide access to Gemini AI services
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
   --member="serviceAccount:$RICKBOT_SA_EMAIL" \
   --role="roles/aiplatform.user"
+
+# To provide access to Google Secret Manager
+gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+  --member="serviceAccount:$RICKBOT_SA_EMAIL" \
+  --role="roles/secretmanager.secretAccessor"
 
 # Allow Compute Engine default service account to build with Cloud Build
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
