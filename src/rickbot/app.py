@@ -5,6 +5,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from limits import storage, parse
+from limits.strategies import MovingWindowRateLimiter
 import streamlit as st
 from agent import load_client, get_rick_bot_response, initialise_model_config
 from create_auth_secrets import create_secrets_toml
@@ -30,6 +32,7 @@ class Config:
     region: str
     logger: logging.Logger
     auth_required: bool # Whether we require logon
+    rate_limit: int # How many model requests we can make
 
 @st.cache_resource
 def get_config() -> Config:
@@ -60,6 +63,7 @@ def get_config() -> Config:
     project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
     region = os.environ.get('GOOGLE_CLOUD_REGION')
     auth_required = os.environ.get("AUTH_REQUIRED", "True").lower() == "true"
+    limit = int(os.environ.get("RATE_LIMIT", "20"))
     
     if not project_id:
         app_logger.error("Configuration Error: GOOGLE_CLOUD_PROJECT not set.")
@@ -74,22 +78,36 @@ def get_config() -> Config:
     app_logger.info(f"Using Google Cloud Project: {project_id}")
     app_logger.info(f"Using Google Cloud Region: {region}")
     app_logger.info(f"Auth required: {auth_required}")
+    app_logger.info(f"Rate limit: {limit}")
 
     return Config(project_id=project_id, 
                   region=region, 
                   logger=app_logger, 
-                  auth_required=auth_required)
-        
+                  auth_required=auth_required,
+                  rate_limit=limit)
+
+@st.cache_resource # Cache across all sessions
+def get_rate_limiter():
+    """
+    Use a simple in-memory storage for rate limiting. 
+    For a shared limit, an external store like Redis/Memorystore would be needed.
+    """
+    limits_mem_store = storage.MemoryStorage()
+    limiter = MovingWindowRateLimiter(limits_mem_store)
+    limit = parse(f"{config.rate_limit}/minute")
+    return limiter, limit
+
 # --- One-time Application Setup  ---
 config = get_config()
 logger = config.logger
+rate_limiter, rate_limit = get_rate_limiter()
 
 # --- Title and Introduction ---
 header_col1, header_col2 = st.columns([0.3, 0.7])
 header_col1.image(AVATARS["assistant"], width=160)
 header_col2.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
 
-def do_rick():
+def show_page():
     st.caption("Ask me something. Or don't. Whatever.")
 
     # --- Session State Initialization ---
@@ -152,42 +170,50 @@ def do_rick():
 
     # Handle new user input
     if prompt := st.chat_input("What do you want?"):
-        # Create the user message object, including any attachments
-        user_message: dict[str, Any] = {"role": "user", "content": prompt}
+        get_rick_response(client, model_config, prompt, uploaded_file)
+
+def get_rick_response(client, model_conf, prompt, uploaded_file):        
+    # Create the user message object, including any attachments
+    user_message: dict[str, Any] = {"role": "user", "content": prompt}
+    if uploaded_file:
+        user_message["attachment"] = {
+            "data": uploaded_file.getvalue(),
+            "mime_type": uploaded_file.type or "",
+        }
+    st.session_state.messages.append(user_message)
+
+    # Display the user's message and attachment in the chat
+    with st.chat_message("user", avatar=AVATARS.get("user")):
         if uploaded_file:
-            user_message["attachment"] = {
-                "data": uploaded_file.getvalue(),
-                "mime_type": uploaded_file.type or "",
-            }
-        st.session_state.messages.append(user_message)
+            mime_type = uploaded_file.type or ""
+            if "image" in mime_type:
+                st.image(uploaded_file)
+            elif "video" in mime_type:
+                st.video(uploaded_file)
+        st.markdown(prompt)
 
-        # Display the user's message and attachment in the chat
-        with st.chat_message("user", avatar=AVATARS.get("user")):
-            if uploaded_file:
-                mime_type = uploaded_file.type or ""
-                if "image" in mime_type:
-                    st.image(uploaded_file)
-                elif "video" in mime_type:
-                    st.video(uploaded_file)
-            st.markdown(prompt)
-
-        # Generate and display Rick's response
-        with st.status("Thinking...", expanded=True) as bot_status:
-            with st.chat_message("assistant", avatar=AVATARS["assistant"]):
-                try:
-                    response_stream = get_rick_bot_response(
-                        client=client,
-                        chat_history=st.session_state.messages,
-                        model_config=model_config)
-                    # Render the response as it comes in
-                    full_response = st.write_stream(response_stream)
-                    bot_status.update(label="Done.", state="complete")
-                    
-                    # Add the full bot response to the session state for context in the next turn
-                    st.session_state.messages.append({"role": "assistant", "content": full_response})
-                except Exception as e:
-                    logger.error(e.__cause__)
-                    st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
+    # --- Rate Limiting Check ---
+    if not rate_limiter.hit(rate_limit, "request_lim"): # Return False when limit exceeded
+        st.warning("Whoa, slow down there, Morty! You Morties are asking waaaay too many questions. Give me a minute. *burp*")
+        return
+    
+    # Generate and display Rick's response
+    with st.status("Thinking...", expanded=True) as bot_status:
+        with st.chat_message("assistant", avatar=AVATARS["assistant"]):
+            try:
+                response_stream = get_rick_bot_response(
+                    client=client,
+                    chat_history=st.session_state.messages,
+                    model_config=model_conf)
+                # Render the response as it comes in
+                full_response = st.write_stream(response_stream)
+                bot_status.update(label="Done.", state="complete")
+                
+                # Add the full bot response to the session state for context in the next turn
+                st.session_state.messages.append({"role": "assistant", "content": full_response})
+            except Exception as e:
+                logger.error(e.__cause__)
+                st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
 
 # Login with Google OAuth
 if config.auth_required:
@@ -206,6 +232,6 @@ if config.auth_required:
             if st.button("Log in with Google", use_container_width=True):
                 st.login()
     else:
-        do_rick()
+        show_page()
 else:
-    do_rick()
+    show_page()

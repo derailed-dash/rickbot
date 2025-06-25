@@ -199,7 +199,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --project=$GOOGLE_CLOUD_PROJECT \
   --ingress all \
   --cpu-boost \
-  --set-env-vars=GOOGLE_CLOUD_PROJECT=$GOOGLE_CLOUD_PROJECT,GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL
+  --set-env-vars=GOOGLE_CLOUD_PROJECT=$GOOGLE_CLOUD_PROJECT,GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL,AUTH_REQUIRED=$AUTH_REQUIRED,RATE_LIMIT=$RATE_LIMIT
 
 APP_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $GOOGLE_CLOUD_REGION --format="value(status.address.url)")
 echo $APP_URL
