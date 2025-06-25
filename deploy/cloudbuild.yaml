@@ -42,7 +42,7 @@ steps:
       - '--allow-unauthenticated'
       - '--max-instances=$_MAX_INSTANCES' # Limit the number of instances to 1
       - '--cpu-boost'
-      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_REGION=$_DEPLOY_REGION,LOG_LEVEL=$_LOG_LEVEL,REQUIRE_AUTH=$_REQUIRE_AUTH'
+      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,GOOGLE_CLOUD_REGION=$_DEPLOY_REGION,LOG_LEVEL=$_LOG_LEVEL,AUTH_REQUIRED=$_AUTH_REQUIRED'
       - '--quiet'
     id: Deploy
     entrypoint: gcloud
@@ -63,7 +63,7 @@ substitutions:
   _AR_HOSTNAME: europe-west4-docker.pkg.dev
   _AR_REPOSITORY: cloud-run-source-deploy
   _AR_PROJECT_ID: rickbot-463118
-  _REQUIRE_AUTH: "False"
+  _AUTH_REQUIRED: "False"
 tags:
   - gcp-cloud-build-deploy-cloud-run
   - gcp-cloud-build-deploy-cloud-run-managed
