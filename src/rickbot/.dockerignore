@@ -1,0 +1,6 @@
+# Ignore dev secrets
+.streamlit/secrets.toml
+
+# Ignore Docker-related files
+Dockerfile*
+.dockerignore
