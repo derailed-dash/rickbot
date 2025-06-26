@@ -1,26 +1,22 @@
 """ A Rick Sanchez (Rick and Morty) Rickbot, rendered using Streamlit. """
 
-from pathlib import Path
 from typing import Any
 from limits import storage, parse
 from limits.strategies import MovingWindowRateLimiter
 import streamlit as st
 
-from config import get_config
+from config import get_config, SCRIPT_DIR
 from agent import load_client, get_rick_bot_response, initialise_model_config
 from create_auth_secrets import create_secrets_toml
+from personality import personalities
 
 APP_NAME = "Rickbot"
-SCRIPT_DIR = Path(__file__).parent
-AVATARS = {
-    "assistant": str(SCRIPT_DIR / "media/rick.png"),
-    "user": str(SCRIPT_DIR / "media/morty.png")
-}
+USER_AVATAR = str(SCRIPT_DIR / "media/morty.png")
 
 # --- Page Configuration ---
 st.set_page_config(
     page_title=APP_NAME,
-    page_icon=AVATARS["assistant"],
+    page_icon=personalities["Rick"].avatar,
     layout="centered",
 )
 
@@ -40,30 +36,45 @@ config = get_config(APP_NAME)
 logger = config.logger
 rate_limiter, rate_limit = get_rate_limiter()
 
+if "current_personality" not in st.session_state:
+    st.session_state.current_personality = "Rick"
+
+current_personality = personalities[st.session_state.current_personality]
+
 # --- Title and Introduction ---
 header_col1, header_col2 = st.columns([0.3, 0.7])
-header_col1.image(AVATARS["assistant"], width=160)
-header_col2.title(f"Wubba Lubba Dub Dub! I'm {APP_NAME}.")
+header_col1.image(current_personality.avatar, width=160)
+header_col2.title(f"I'm {current_personality.name} Bot. {current_personality.title}")
+st.caption(current_personality.welcome)
 
 def show_page():
-    st.caption("Ask me something. Or don't. Whatever.")
-
     # --- Session State Initialization ---
     # For maintaining the conversation history.
     if "messages" not in st.session_state:
         st.session_state.messages = []
-
+    
     # --- Sidebar for Configuration ---
     with st.sidebar:
         if config.auth_required and st.user.is_logged_in:
             st.caption(f"Welcome, {st.user.name}")
             st.button("Log out", on_click=st.logout)
-        
-        st.info("I'm Rick Sanchez. The smartest man in the universe. I may be cynical and sarcastic. User discretion is advised.")
+
+        # --- Personality Selection ---
+        personality_names = list(personalities.keys())
+        selected_personality = st.selectbox(
+            "Choose your Chatbot", personality_names, index=personality_names.index(current_personality.name)
+        )
+
+        if selected_personality != current_personality.name:
+            st.session_state.current_personality = selected_personality
+            st.session_state.messages = [] # Reset messages on personality change
+            st.rerun()
+            
+        st.info(current_personality.overview)
         
         # --- File Uploader ---
         uploaded_file = st.file_uploader(
-            "Upload a file if you want. I'll probably just make fun of it.",
+            "Upload a file.",
             type=["png", "jpg", "jpeg", "pdf", "mp3", "mp4", "mov", "webm"]
         )
         
@@ -86,7 +97,7 @@ def show_page():
     # Initialize the AI client
     try:
         client = load_client(config.project_id, config.region)
-        model_config = initialise_model_config()
+        model_config = initialise_model_config(current_personality)
     except Exception as e:
         logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
         st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
@@ -94,7 +105,8 @@ def show_page():
 
     # Display previous messages from history
     for message in st.session_state.messages:
-        with st.chat_message(message["role"], avatar=AVATARS[message["role"]]):
+        avatar = USER_AVATAR if message["role"] == "user" else current_personality.avatar
+        with st.chat_message(message["role"], avatar=avatar):
             # Render any attachments first
             if "attachment" in message and message["attachment"]:
                 attachment = message["attachment"]
@@ -107,7 +119,7 @@ def show_page():
             st.markdown(message["content"])
 
     # Handle new user input
-    if prompt := st.chat_input("What do you want?"):
+    if prompt := st.chat_input(current_personality.prompt_question):
         get_rick_response(client, model_config, prompt, uploaded_file)
 
 def get_rick_response(client, model_conf, prompt, uploaded_file):        
@@ -121,7 +133,7 @@ def get_rick_response(client, model_conf, prompt, uploaded_file):
     st.session_state.messages.append(user_message)
 
     # Display the user's message and attachment in the chat
-    with st.chat_message("user", avatar=AVATARS.get("user")):
+    with st.chat_message("user", avatar=USER_AVATAR):
         if uploaded_file:
             mime_type = uploaded_file.type or ""
             if "image" in mime_type:
@@ -132,12 +144,12 @@ def get_rick_response(client, model_conf, prompt, uploaded_file):
 
     # --- Rate Limiting Check ---
     if not rate_limiter.hit(rate_limit, "request_lim"): # Return False when limit exceeded
-        st.warning("Whoa, slow down there, Morty! You Morties are asking waaaay too many questions. Give me a minute. *burp*")
+        st.warning("Whoa, slow down there, Morty! You Morties are asking waaaay too many questions. Give me a minute.")
         return
     
     # Generate and display Rick's response
     with st.status("Thinking...", expanded=True) as bot_status:
-        with st.chat_message("assistant", avatar=AVATARS["assistant"]):
+        with st.chat_message("assistant", avatar=current_personality.avatar):
             try:
                 response_stream = get_rick_bot_response(
                     client=client,

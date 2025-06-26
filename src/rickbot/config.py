@@ -1,8 +1,11 @@
 """ Configuration for the Rickbot """
 import logging
 import os
+from pathlib import Path
 from dataclasses import dataclass
 import streamlit as st
+
+SCRIPT_DIR = Path(__file__).parent
 
 @dataclass
 class Config:
