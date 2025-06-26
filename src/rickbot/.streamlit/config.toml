@@ -1,1 +1,3 @@
-client.toolbarMode = "viewer"
+[client]
+toolbarMode = "viewer"
+showSidebarNavigation = false
