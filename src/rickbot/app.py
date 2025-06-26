@@ -43,7 +43,7 @@ current_personality = personalities[st.session_state.current_personality]
 
 # --- Title and Introduction ---
 header_col1, header_col2 = st.columns([0.3, 0.7])
-header_col1.image(current_personality.avatar, width=160)
+header_col1.image(current_personality.avatar, width=140)
 header_col2.title(f"I'm {current_personality.name} Bot. {current_personality.title}")
 
 def show_page():
