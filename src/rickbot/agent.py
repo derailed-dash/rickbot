@@ -120,15 +120,19 @@ def get_rick_bot_response(client, chat_history: list[dict], model_config: Genera
     contents = []
     for message in chat_history:
         role = "model" if message["role"] == "assistant" else message["role"]
-        if role in ("user", "model"): # Skip any roles that are not 'user' or 'model'
-            prompt = Part.from_text(text=message["content"])
-            contents = [prompt]
-            
-            # If there's an attachment, add it as a data part
-            if "attachment" in message and message["attachment"]:
-                attachment = message["attachment"]
-                contents.append(Part.from_bytes(data=attachment['data'], mime_type=attachment['mime_type']))
-            
+
+        if role not in ("user", "model"): # Skip any roles that are not 'user' or 'model'
+            continue
+        
+        parts_for_current_message = [Part.from_text(text=message["content"])]
+
+        # If there's an attachment, add it as a data part
+        if "attachment" in message and message["attachment"]:
+            attachment = message["attachment"]
+            parts_for_current_message.append(Part.from_bytes(data=attachment['data'], mime_type=attachment['mime_type']))
+
+        contents.append(genai.types.Content(role=role, parts=parts_for_current_message))
+
     try:
         for chunk in client.models.generate_content_stream(
             model=MODEL,
