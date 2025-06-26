@@ -21,13 +21,18 @@ project/
 |
 ├── src/
 |   └── rickbot/
-|       |   └── .streamlit/ # For Streamlit configuration
-|       |   └── media/      # E.g. avatar images
+|       |   ├── .streamlit/        # For Streamlit configuration
+|       |   ├── media/             # E.g. avatar images - names in lower case
+|       |   ├── pages/             # Pages - e.g. privacy policy
+|       |   └── system_prompts/    # names in lower case
+|       |
 |       ├── app.py
 |       ├── agent.py
 |       ├── config.py
-|       ├── requirements.txt
-|       ├── .dockerignore   # Exclude files from container image
+|       ├── create_auth_secrets.py # Dynamicly create secrets.toml
+|       ├── personality.py         # Definition of personalities
+|       ├── requirements.txt    
+|       ├── .dockerignore          # Exclude files from container image
 |       └── Dockerfile
 |
 ├── .env
