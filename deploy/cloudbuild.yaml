@@ -63,7 +63,7 @@ substitutions:
   _AR_HOSTNAME: europe-west4-docker.pkg.dev
   _AR_REPOSITORY: cloud-run-source-deploy
   _AR_PROJECT_ID: rickbot-463118
-  _AUTH_REQUIRED: "False"
+  _AUTH_REQUIRED: "True"
   _RATE_LIMIT: "60"
 tags:
   - gcp-cloud-build-deploy-cloud-run

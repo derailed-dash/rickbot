@@ -37,6 +37,14 @@ project/
 
 ## Deployment Guidance
 
+### Per-Environment Setup
+
+```bash
+# Setup Python environment and install dependencies
+uv venv .venv
+uv sync
+```
+
 ### Every Session
 
 For local dev, run the following from your project's root folder:
@@ -129,15 +137,6 @@ gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
 ```
 
 ### Running and Testing the Application Locally
-
-#### Per-Environment Setup
-
-```bash
-# Setup Python environment and install dependencies
-cd rickbot
-uv venv .venv
-uv sync
-```
 
 #### Running Streamlit App
 
