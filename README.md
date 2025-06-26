@@ -25,6 +25,7 @@ project/
 |       |   └── media/      # E.g. avatar images
 |       ├── app.py
 |       ├── agent.py
+|       ├── config.py
 |       ├── requirements.txt
 |       ├── .dockerignore   # Exclude files from container image
 |       └── Dockerfile
