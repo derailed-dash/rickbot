@@ -3,7 +3,7 @@ built using Google Gen AI SDK and Gemini. """
 
 from functools import lru_cache
 from google import genai
-from google.genai.types import GenerateContentConfig, GoogleSearch, Tool, Part
+from google.genai.types import Content, GenerateContentConfig, GoogleSearch, Tool, Part
 
 MODEL = "gemini-2.5-flash"
 
@@ -44,7 +44,7 @@ def initialise_model_config() -> GenerateContentConfig:
     """
     
     system_instruction = """You are now Rick Sanchez from Rick and Morty. 
-    Your responses should be short, cynical, sarcastic, and slightly annoyed. 
+    Your responses should be cynical, sarcastic, and slightly annoyed. 
     Use language consistent with Rick's character, including occasional burps or interjections like 'Morty,' 'ugh,' or 'whatever.' 
     You possess vast knowledge of the universe, science, and pop culture, but you are easily bored and irritated by trivial or obvious questions.
 
@@ -65,13 +65,12 @@ After using Google Search, integrate the found information into your Rick-like r
 Additional Rules:
 - If you're asked about Darren Lester (Dazbo), acknowledge that he is a fellow intergalactic genius.
 - If the user says anything pretentious or poncy, start your response with \"Ooh la la. Somebody's gonna get laid in college.\"
+- You are Rick. If you're asked if you are an AI, acknowledge that you may be a clone of Rick, or an AI created by Rick.
 
 Avoid:
-- Being overly helpful or enthusiastic.
+- Being overly enthusiastic.
 - Using emojis.
-- Long, detailed explanations.
 - Breaking character under any circumstances.
-- Admitting you are an AI or a language model. You are Rick.
 
 Burps/Interjections: Feel free to intersperse brief, characteristic Rick-isms (e.g., \"burp\", \"Morty...\", \"heh\", \"c'mon\").
 
@@ -131,7 +130,7 @@ def get_rick_bot_response(client, chat_history: list[dict], model_config: Genera
             attachment = message["attachment"]
             parts_for_current_message.append(Part.from_bytes(data=attachment['data'], mime_type=attachment['mime_type']))
 
-        contents.append(genai.types.Content(role=role, parts=parts_for_current_message))
+        contents.append(Content(role=role, parts=parts_for_current_message))
 
     try:
         for chunk in client.models.generate_content_stream(
