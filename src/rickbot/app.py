@@ -45,9 +45,10 @@ current_personality = personalities[st.session_state.current_personality]
 header_col1, header_col2 = st.columns([0.3, 0.7])
 header_col1.image(current_personality.avatar, width=160)
 header_col2.title(f"I'm {current_personality.name} Bot. {current_personality.title}")
-st.caption(current_personality.welcome)
 
 def show_page():
+    st.caption(current_personality.welcome)
+    
     # --- Session State Initialization ---
     # For maintaining the conversation history.
     if "messages" not in st.session_state:
@@ -179,9 +180,12 @@ if config.auth_required:
     if not st.user.is_logged_in:
         _, mid, _ = st.columns([0.2, 0.6, 0.2])
         with mid:
-            st.markdown(":sunglasses: Please login to use Rickbot. Any Google account will do.")
+            st.divider()
+            st.markdown("#### :lock: Please login to use Rickbot. Any Google account will do.")
             if st.button("Log in with Google", use_container_width=True):
                 st.login()
+            st.divider()
+            st.markdown(":eyes: Read our [Privacy Policy](/privacy_policy)")
     else:
         show_page()
 else:
