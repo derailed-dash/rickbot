@@ -63,7 +63,7 @@ def show_page():
         # --- Personality Selection ---
         personality_names = list(personalities.keys())
         selected_personality = st.selectbox(
-            "Choose your Chatbot", personality_names, index=personality_names.index(current_personality.name)
+            "Choose your bot personality:", personality_names, index=personality_names.index(current_personality.name)
         )
 
         if selected_personality != current_personality.name:
@@ -87,8 +87,7 @@ def show_page():
             """
             ### Info
             * Created by Dazbo.
-            * I do not store any user data, prompts or responses.
-            * Read our [Privacy Policy](/privacy_policy).
+            * I do not store any user data, prompts or responses. Read our [Privacy Policy](/privacy_policy).
             * Check out the [GitHub repo](https://github.com/derailed-dash/rickbot/).
             * View the [Rickbot blog post](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
             """
