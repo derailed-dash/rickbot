@@ -180,11 +180,10 @@ if config.auth_required:
         _, mid, _ = st.columns([0.2, 0.6, 0.2])
         with mid:
             st.divider()
-            st.markdown("#### :lock: Please login to use Rickbot. Any Google account will do.")
+            st.markdown(":lock: Please login to use Rickbot. Any Google account will do. Login helps us prevent abuse and maintain a stable, accessible experience for everyone.")
             if st.button("Log in with Google", use_container_width=True):
                 st.login()
-            st.divider()
-            st.markdown(":eyes: Read our [Privacy Policy](/privacy_policy)")
+            st.markdown(":eyes: We do not store any user data, prompts or responses. Read our [Privacy Policy](/privacy_policy).")
     else:
         show_page()
 else:
