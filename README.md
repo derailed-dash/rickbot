@@ -1,5 +1,7 @@
 # Rickbot
 
+<img src="docs/media/rickbot_personalities.gif" alt="Rickbot" width="800" />
+
 ## Repo Metadata
 
 Author: Darren Lester
