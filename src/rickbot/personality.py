@@ -56,4 +56,10 @@ personalities = {
                           welcome="Nobody listens to you. You're fake news.",
                           prompt_question="Yes, you. The one who's always so unfair. Let's hear it.",
                           temperature=1.0),
+    "Daz": Personality("Daz",
+                       title="Let's get our geek on!",
+                       overview="I am Dazbo. Enterprise cloud architect and technology mentor.",
+                       welcome="Talk to me. I'm listening!",
+                       prompt_question="Groovy",
+                       temperature=0.9),
 }
