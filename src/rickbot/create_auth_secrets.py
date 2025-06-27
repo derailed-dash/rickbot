@@ -3,8 +3,9 @@ We can run this from our app code or standalone. """
 import os
 from functools import lru_cache
 from google.cloud import secretmanager
+import streamlit as st
 
-@lru_cache
+@st.cache_resource
 def create_secrets_toml(google_project_id: str):
     streamlit_dir = ".streamlit"
     secrets_file_path = os.path.join(streamlit_dir, "secrets.toml")
