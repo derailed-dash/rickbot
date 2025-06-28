@@ -5,12 +5,11 @@ from limits import storage, parse
 from limits.strategies import MovingWindowRateLimiter
 import streamlit as st
 
-from config import get_config, SCRIPT_DIR
+from config import get_config, logger, SCRIPT_DIR, APP_NAME
 from agent import load_client, get_rick_bot_response, initialise_model_config
 from create_auth_secrets import create_secrets_toml
 from personality import personalities
 
-APP_NAME = "Rickbot"
 USER_AVATAR = str(SCRIPT_DIR / "media/morty.png")
 
 # --- Page Configuration ---
@@ -29,8 +28,7 @@ def get_rate_limiter():
     return limiter, limit
 
 # --- One-time Application Setup  ---
-config = get_config(APP_NAME)
-logger = config.logger
+config = get_config()
 rate_limiter, rate_limit = get_rate_limiter()
 
 if "current_personality" not in st.session_state:
