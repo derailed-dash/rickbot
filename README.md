@@ -88,6 +88,8 @@ source .venv/bin/activate
 ### One-Time Google Cloud Setup
 
 ```bash
+### Run from project's root folder:
+
 # Enable APIs
 gcloud services enable \
   serviceusage.googleapis.com \
@@ -142,6 +144,16 @@ gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
 gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
   --member="group:gcp-devops@$MY_ORG" \
   --role="roles/iap.admin"
+
+# Create a new secret to hold the Dazbo prompt
+gcloud secrets create dazbo-system-prompt \
+  --project=$GOOGLE_CLOUD_PROJECT \
+  --replication-policy="automatic"
+
+# Add the content of your file as a new version of the secret
+gcloud secrets versions add dazbo-system-prompt \
+  --project=$GOOGLE_CLOUD_PROJECT \
+  --data-file="src/rickbot/secure_prompts/dazbo.txt"
 ```
 
 ### Running and Testing the Application Locally
