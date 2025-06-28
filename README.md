@@ -22,6 +22,7 @@ project/
 |   └── cloudbuild.yaml     # Cloud Build config 
 |
 ├── src/
+|   └── secure_prompts/            # Stored in Secret Manager
 |   └── rickbot/
 |       |   ├── .streamlit/        # For Streamlit configuration
 |       |   ├── media/             # E.g. avatar images - names in lower case
@@ -153,7 +154,7 @@ gcloud secrets create dazbo-system-prompt \
 # Add the content of your file as a new version of the secret
 gcloud secrets versions add dazbo-system-prompt \
   --project=$GOOGLE_CLOUD_PROJECT \
-  --data-file="src/rickbot/secure_prompts/dazbo.txt"
+  --data-file="src/secure_prompts/dazbo.txt"
 ```
 
 ### Running and Testing the Application Locally
