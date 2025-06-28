@@ -22,10 +22,7 @@ st.set_page_config(
 
 @st.cache_resource # Cache across all sessions
 def get_rate_limiter():
-    """
-    Use a simple in-memory storage for rate limiting. 
-    For a shared limit, an external store like Redis/Memorystore would be needed.
-    """
+    """ Simple in-memory storage for rate limiting. """
     limits_mem_store = storage.MemoryStorage()
     limiter = MovingWindowRateLimiter(limits_mem_store)
     limit = parse(f"{config.rate_limit}/minute")
@@ -44,7 +41,7 @@ current_personality = personalities[st.session_state.current_personality]
 # --- Title and Introduction ---
 header_col1, header_col2 = st.columns([0.3, 0.7])
 header_col1.image(current_personality.avatar, width=140)
-header_col2.title(f"I'm {current_personality.name} Bot. {current_personality.title}")
+header_col2.title(f"{current_personality.title}")
 
 def show_page():
     st.caption(current_personality.welcome)
