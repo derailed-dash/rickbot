@@ -29,9 +29,10 @@ project/
 |       |   ├── pages/             # Pages - e.g. privacy policy
 |       |   └── system_prompts/    # names in lower case
 |       |
-|       ├── app.py
-|       ├── agent.py
-|       ├── config.py
+|       ├── app.py                 # Home page / auth
+|       ├── agent.py               # Interactions with the model
+|       ├── chat.py                # Main UI interaction page
+|       ├── config.py              # Global app config and logging
 |       ├── create_auth_secrets.py # Dynamicly create secrets.toml
 |       ├── personality.py         # Definition of personalities
 |       ├── requirements.txt    
