@@ -13,4 +13,5 @@ dependencies = [
     "Authlib==1.6.0",
     "google-cloud-secret-manager",
     "limits",
+    "pyyaml>=6.0.2",
 ]

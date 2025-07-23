@@ -1,6 +1,7 @@
 """Configure personalities for Rickbot"""
 
 import os
+import yaml  # pyyaml
 from config import logger, SCRIPT_DIR
 from utils import retrieve_secret
 
@@ -11,13 +12,6 @@ def get_avatar(name: str) -> str:
 
 class Personality:
     """Configuration for a given personality"""
-
-    name: str
-    overview: str
-    welcome: str
-    avatar: str
-    temperature: float
-    system_instruction: str
 
     def __init__(
         self,
@@ -38,7 +32,7 @@ class Personality:
 
         # Retrieve the prompt from the system_prompts folder
         # If the prompt doesn't exist, try retrieving from Secret Manager
-        system_prompt_file = SCRIPT_DIR / "system_prompts" / f"{name.lower()}.txt"
+        system_prompt_file = SCRIPT_DIR / "data/system_prompts" / f"{name.lower()}.txt"
         if os.path.exists(system_prompt_file):
             with open(system_prompt_file, "r", encoding="utf-8") as f:
                 self.system_instruction = f.read()
@@ -66,45 +60,16 @@ class Personality:
         return self.name
 
 
-personalities = {
-    "Rick": Personality(
-        "Rick",
-        title="I'm Rickbot! Wubba Lubba Dub Dub!",
-        overview="I'm Rick Sanchez. The smartest man in the universe. Cynical and sarcastic. People are dumb.",
-        welcome="Ask me something. Or don't. Whatever.",
-        prompt_question="What do you want?",
-        temperature=1.0,
-    ),
-    "Yoda": Personality(
-        "Yoda",
-        title="Yoda, I am. Much to learn, you still have.",
-        overview="Yoda, I am. Wise, perhaps. A teacher. The Force, my guide.",
-        welcome="Do or do not. There is no try.",
-        prompt_question="Speak your mind, you should. Hmmm?",
-        temperature=0.9,
-    ),
-    "Donald": Personality(
-        "Donald",
-        title="I'm The Donald: biggest knower of everything. Believe me.",
-        overview="I am Donald. Ignorant, narcissitic, arrogant, bully.",
-        welcome="Nobody listens to you. You're fake news.",
-        prompt_question="Yes, you. The one who's always so unfair. Let's hear it.",
-        temperature=1.0,
-    ),
-    "Yasmin": Personality(
-        "Yasmin",
-        title="YasGPT: Don't get it twisted, babe — I’m the main character",
-        overview="I'm Yasmin — bit of a flirt, bit of a menace, and probably exactly your type 👀",
-        welcome="You know what what I want.",
-        prompt_question="You ready for me or what?",
-        temperature=1.0,
-    ),
-    "Dazbo": Personality(
-        "Dazbo",
-        title="I'm Dazbot. Let's get our geek on!",
-        overview="I am Dazbo. Enterprise cloud architect and technology mentor.",
-        welcome="Talk to me. I'm listening!",
-        prompt_question="Groovy",
-        temperature=0.9,
-    ),
-}
+def load_personalities(yaml_file: str) -> dict[str, Personality]:
+    """Load personalities from a YAML file."""
+    peeps: dict[str, Personality] = {}
+    with open(yaml_file, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+        for personality_data in data:
+            personality = Personality(**personality_data)
+            peeps[personality.name] = personality
+    return peeps
+
+
+# Load personalities from the YAML file
+personalities = load_personalities(str(SCRIPT_DIR / "data/personalities.yaml"))
