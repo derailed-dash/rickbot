@@ -1,5 +1,7 @@
-""" Utility functions """
+"""Utility functions"""
+
 from google.cloud import secretmanager
+
 
 def retrieve_secret(project_id: str, secret_id: str, version_id: str = "latest") -> str:
     """

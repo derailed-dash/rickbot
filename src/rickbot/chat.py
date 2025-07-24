@@ -1,6 +1,7 @@
 """
 This module contains the chat interface for the Ricbot Streamlit application.
 """
+
 from typing import Any
 import streamlit as st
 
@@ -10,15 +11,26 @@ from personality import personalities
 
 USER_AVATAR = str(SCRIPT_DIR / "media/morty.png")
 
-def get_rick_response(client, model_conf, prompt, uploaded_file, rate_limiter, rate_limit, current_personality):
+
+def get_rick_response(
+    client,
+    model_conf,
+    prompt,
+    uploaded_file,
+    rate_limiter,
+    rate_limit,
+    current_personality,
+):
     """
     Handles user input, rate limiting, and generating the bot's response.
     """
     # --- Rate Limiting Check ---
     # Perform this check *before* modifying session state or displaying the user's prompt
     if not rate_limiter.hit(rate_limit, "request_lim"):
-        st.warning("Whoa, slow down there, Morty! You Morties are asking waaaay too many questions. Give me a minute.")
-        st.stop() # Stop execution to prevent the message from being processed
+        st.warning(
+            "Whoa, slow down there, Morty! You Morties are asking waaaay too many questions. Give me a minute."
+        )
+        st.stop()  # Stop execution to prevent the message from being processed
 
     # Create the user message object, including any attachments
     user_message: dict[str, Any] = {"role": "user", "content": prompt}
@@ -46,16 +58,22 @@ def get_rick_response(client, model_conf, prompt, uploaded_file, rate_limiter, r
                 response_stream = get_rick_bot_response(
                     client=client,
                     chat_history=st.session_state.messages,
-                    model_config=model_conf)
-                
+                    model_config=model_conf,
+                )
+
                 full_response = st.write_stream(response_stream)
                 bot_status.update(label="Done.", state="complete")
-                
+
                 # Add the full bot response to the session state for context in the next turn
-                st.session_state.messages.append({"role": "assistant", "content": full_response})
+                st.session_state.messages.append(
+                    {"role": "assistant", "content": full_response}
+                )
             except Exception as e:
                 logger.error(e.__cause__)
-                st.error(f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}")
+                st.error(
+                    f"Ugh, great. I think I'm too drunk to respond. Are you even connected right now? Error: {type(e.__cause__)}"
+                )
+
 
 def render_chat(config, rate_limiter, rate_limit):
     """
@@ -67,11 +85,11 @@ def render_chat(config, rate_limiter, rate_limit):
     header_col1.image(current_personality.avatar, width=140)
     header_col2.title(f"{current_personality.title}")
     st.caption(current_personality.welcome)
-    
+
     # --- Session State Initialization ---
     if "messages" not in st.session_state:
         st.session_state.messages = []
-    
+
     # --- Sidebar for Configuration ---
     with st.sidebar:
         if config.auth_required and st.user.is_logged_in:
@@ -79,28 +97,35 @@ def render_chat(config, rate_limiter, rate_limit):
             st.button("Log out", on_click=st.logout)
 
         # --- Personality Selection ---
-        personality_names = list(personalities.keys())
-        selected_personality = st.selectbox(
-            "Choose your bot personality:", personality_names, index=personality_names.index(current_personality.name)
+        personality_menu_names = [p.menu_name for p in personalities.values()]
+        selected_menu_name = st.selectbox(
+            "Choose your bot personality:",
+            options=personality_menu_names,
+            index=personality_menu_names.index(current_personality.menu_name),
         )
 
-        if selected_personality != current_personality.name:
-            st.session_state.current_personality = selected_personality
-            st.session_state.messages = [] # Reset messages on personality change
+        # Find the corresponding personality object based on the selected menu_name
+        selected_personality = next(
+            p for p in personalities.values() if p.menu_name == selected_menu_name
+        )
+
+        if selected_personality.name != st.session_state.current_personality:
+            st.session_state.current_personality = selected_personality.name
+            st.session_state.messages = []  # Reset messages on personality change
             st.rerun()
-            
+
         st.info(current_personality.overview)
-        
+
         # --- File Uploader ---
         uploaded_file = st.file_uploader(
             "Upload a file.",
-            type=["png", "jpg", "jpeg", "pdf", "mp3", "mp4", "mov", "webm"]
+            type=["png", "jpg", "jpeg", "pdf", "mp3", "mp4", "mov", "webm"],
         )
-        
+
         if st.button("Clear Chat History", use_container_width=True):
             st.session_state.messages = []
             st.rerun()
-            
+
         st.info(
             """
             ### Info
@@ -110,19 +135,23 @@ def render_chat(config, rate_limiter, rate_limit):
             * View the [Rickbot blog post](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
             """
         )
-        
+
     # --- Main Chat Interface ---
     try:
         client = load_client(config.project_id, config.region)
         model_config = initialise_model_config(current_personality)
     except Exception as e:
         logger.error(f"Failed to initialize AI client: {e}", exc_info=True)
-        st.error(f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}")
+        st.error(
+            f"⚠️ Could not initialize the application. Please check your configuration. Error: {e}"
+        )
         st.stop()
 
     # Display previous messages from history
     for message in st.session_state.messages:
-        avatar = USER_AVATAR if message["role"] == "user" else current_personality.avatar
+        avatar = (
+            USER_AVATAR if message["role"] == "user" else current_personality.avatar
+        )
         with st.chat_message(message["role"], avatar=avatar):
             if "attachment" in message and message["attachment"]:
                 attachment = message["attachment"]
@@ -134,5 +163,12 @@ def render_chat(config, rate_limiter, rate_limit):
 
     # Handle new user input
     if prompt := st.chat_input(current_personality.prompt_question):
-        get_rick_response(client, model_config, prompt, uploaded_file, rate_limiter, rate_limit, current_personality)
-    
+        get_rick_response(
+            client,
+            model_config,
+            prompt,
+            uploaded_file,
+            rate_limiter,
+            rate_limit,
+            current_personality,
+        )

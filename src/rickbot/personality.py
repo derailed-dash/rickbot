@@ -1,6 +1,7 @@
 """Configure personalities for Rickbot"""
 
 import os
+from dataclasses import dataclass, field
 import yaml  # pyyaml
 from config import logger, SCRIPT_DIR
 from utils import retrieve_secret
@@ -10,29 +11,28 @@ def get_avatar(name: str) -> str:
     return str(SCRIPT_DIR / f"media/{name}.png")
 
 
+@dataclass(unsafe_hash=True)
 class Personality:
     """Configuration for a given personality"""
 
-    def __init__(
-        self,
-        name: str,
-        title: str,
-        overview: str,
-        welcome: str,
-        prompt_question: str,
-        temperature: float,
-    ) -> None:
-        self.name = name
-        self.title = title
-        self.overview = overview
-        self.welcome = welcome
-        self.prompt_question = prompt_question
-        self.avatar = get_avatar(name.lower())
-        self.temperature = temperature
+    name: str
+    menu_name: str
+    title: str
+    overview: str
+    welcome: str
+    prompt_question: str
+    temperature: float
+    avatar: str = field(init=False)
+    system_instruction: str = field(init=False)
+
+    def __post_init__(self) -> None:
+        self.avatar = get_avatar(self.name.lower())
 
         # Retrieve the prompt from the system_prompts folder
         # If the prompt doesn't exist, try retrieving from Secret Manager
-        system_prompt_file = SCRIPT_DIR / "data/system_prompts" / f"{name.lower()}.txt"
+        system_prompt_file = (
+            SCRIPT_DIR / "data/system_prompts" / f"{self.name.lower()}.txt"
+        )
         if os.path.exists(system_prompt_file):
             with open(system_prompt_file, "r", encoding="utf-8") as f:
                 self.system_instruction = f.read()
@@ -42,7 +42,7 @@ class Personality:
             )
             try:
                 google_project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-                secret_name = f"{name.lower()}-system-prompt"
+                secret_name = f"{self.name.lower()}-system-prompt"
                 self.system_instruction = retrieve_secret(google_project, secret_name)  # type: ignore
                 logger.info("Successfully retrieved.")
             except Exception as e:
@@ -53,9 +53,6 @@ class Personality:
                     f"{system_prompt_file} not found and could not access '{secret_name}' from Secret Manager: {e}"
                 ) from e
 
-    def __hash__(self):
-        return hash(self.name)
-
     def __repr__(self) -> str:
         return self.name
 
@@ -64,9 +61,9 @@ def load_personalities(yaml_file: str) -> dict[str, Personality]:
     """Load personalities from a YAML file."""
     peeps: dict[str, Personality] = {}
     with open(yaml_file, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-        for personality_data in data:
-            personality = Personality(**personality_data)
+        peep_data = yaml.safe_load(f)
+        for this_peep in peep_data:
+            personality = Personality(**this_peep)
             peeps[personality.name] = personality
     return peeps
 
