@@ -1,5 +1,3 @@
-# app.py
-
 """A Rick Sanchez (Rick and Morty) Rickbot, rendered using Streamlit."""
 
 import streamlit as st
@@ -13,11 +11,11 @@ from chat import render_chat  # Import the new chat renderer
 
 # --- Page Configuration ---
 # This must be the first Streamlit command in your script.
-rickbot_avatar = get_avatar("rickbot-trans")
+RICKBOT_AVATAR = get_avatar("rickbot-trans")
 
 st.set_page_config(
     page_title=APP_NAME,
-    page_icon=rickbot_avatar,  # Default icon
+    page_icon=RICKBOT_AVATAR,  # Default icon
     layout="centered",
 )
 
@@ -62,7 +60,7 @@ if config.auth_required:
 
     if not st.user.is_logged_in:
         header_col1, header_col2 = st.columns([0.3, 0.7])
-        header_col1.image(rickbot_avatar, width=140)
+        header_col1.image(RICKBOT_AVATAR, width=140)
         header_col2.title(f"{current_personality.title}")
 
         st.divider()

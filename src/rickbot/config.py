@@ -46,11 +46,6 @@ class Config:
     rate_limit: int  # How many model requests we can make
 
 
-# @st.cache_resource
-# def get_google_project():
-#     return os.environ.get('GOOGLE_CLOUD_PROJECT')
-
-
 @st.cache_resource
 def get_config() -> Config:
     """
