@@ -11,7 +11,7 @@ steps:
       - >-
         $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$_SERVICE_NAME:$SHORT_SHA
       - src/rickbot
-      - '-f'
+      - '-f' # --file for Dockerfile
       - src/rickbot/Dockerfile
     id: Build
 
