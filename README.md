@@ -172,7 +172,7 @@ gcloud secrets versions add dazbo-system-prompt \
 ```bash
 # Local streamlit app
 # Run from your project/src/rickbot directory
-uv run -- streamlit run app.py --browser.serverAddress=localhost
+GOOGLE_CLOUD_PROJECT=$GCP_PROJECT uv run -- streamlit run app.py --browser.serverAddress=localhost
 ```
 
 #### Running in a Local Container
