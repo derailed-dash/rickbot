@@ -57,7 +57,14 @@ uv sync
 
 ### Every Session
 
-For local dev, run the following from your project's root folder:
+For local dev, you should initialise any new session by running:
+
+```bash
+# From project root
+source setup-env.sh # Optionally add noauth parameter to skip authentication
+```
+
+This will run a script that executes the following:
 
 ```bash
 # Authenticate yourself to gcloud
@@ -67,7 +74,7 @@ For local dev, run the following from your project's root folder:
 gcloud auth login --update-adc 
 
 # Set these manually...
-export GOOGLE_CLOUD_PROJECT="<Your Google Cloud Project ID>"
+export GCP_PROJECT="<Your Google Cloud Project ID>"
 export GOOGLE_CLOUD_REGION="<your region>"
 export MY_ORG="<enter your org domain>"
 export DOMAIN_NAME="<enter application domain name>"
@@ -76,11 +83,11 @@ export DOMAIN_NAME="<enter application domain name>"
 # Or load from .env, or .env.dev, or whatever
 source .env
 
-export PROJECT_NUMBER=$(gcloud projects describe $GOOGLE_CLOUD_PROJECT --format="value(projectNumber)")
+export PROJECT_NUMBER=$(gcloud projects describe $GCP_PROJECT --format="value(projectNumber)")
 
 # Make sure we're on the right project...
-gcloud config set project $GOOGLE_CLOUD_PROJECT
-gcloud auth application-default set-quota-project $GOOGLE_CLOUD_PROJECT
+gcloud config set project $GCP_PROJECT
+gcloud auth application-default set-quota-project $GCP_PROJECT
 gcloud config list project
 
 # Once your venv has been created
@@ -108,53 +115,53 @@ gcloud services enable \
 gcloud iam service-accounts create $RICKBOT_SA
 
 # To allow the SA to run Cloud run services
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
   --member="serviceAccount:$RICKBOT_SA_EMAIL" \
   --role="roles/run.admin"
 
 # To provide access to Gemini AI services
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
   --member="serviceAccount:$RICKBOT_SA_EMAIL" \
   --role="roles/aiplatform.user"
 
 # To provide access to Google Secret Manager
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
   --member="serviceAccount:$RICKBOT_SA_EMAIL" \
   --role="roles/secretmanager.secretAccessor"
 
 # Allow Compute Engine default service account to build with Cloud Build
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
     --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com \
     --role="roles/cloudbuild.builds.builder"
 
 # Grant the required role to the principal
 # that will attach the service account to other resources.
 # Here we assume your developer account is a member of the gcp-devops group.
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
   --member="group:gcp-devops@$MY_ORG" \
   --role="roles/iam.serviceAccountUser"
 
 # Allow service account impersonation
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
   --member="group:gcp-devops@$MY_ORG" \
   --role=roles/iam.serviceAccountTokenCreator
 
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
    --member="group:gcp-devops@$MY_ORG" \
    --role roles/run.admin  
 
-gcloud projects add-iam-policy-binding $GOOGLE_CLOUD_PROJECT \
+gcloud projects add-iam-policy-binding $GCP_PROJECT \
   --member="group:gcp-devops@$MY_ORG" \
   --role="roles/iap.admin"
 
 # Create a new secret to hold the Dazbo prompt
 gcloud secrets create dazbo-system-prompt \
-  --project=$GOOGLE_CLOUD_PROJECT \
+  --project=$GCP_PROJECT \
   --replication-policy="automatic"
 
 # Add the content of your file as a new version of the secret
 gcloud secrets versions add dazbo-system-prompt \
-  --project=$GOOGLE_CLOUD_PROJECT \
+  --project=$GCP_PROJECT \
   --data-file="src/secure_prompts/dazbo.txt"
 ```
 
@@ -181,7 +188,7 @@ docker build -t $SERVICE_NAME:$VERSION .
 # We need to pass environment variables to the container
 # and the Google Application Default Credentials (ADC)
 docker run --rm -p 8080:8080 \
-  -e GOOGLE_CLOUD_PROJECT=$GOOGLE_CLOUD_PROJECT -e GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION \
+  -e GCP_PROJECT=$GCP_PROJECT -e GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION \
   -e LOG_LEVEL=$LOG_LEVEL \
   -e GOOGLE_APPLICATION_CREDENTIALS="/app/.config/gcloud/application_default_credentials.json" \
   --mount type=bind,source=${HOME}/.config/gcloud,target=/app/.config/gcloud \
@@ -204,7 +211,7 @@ gcloud auth configure-docker "$GOOGLE_CLOUD_REGION-docker.pkg.dev"
 # This will take a couple of minutes
 export VERSION=$(git rev-parse --short HEAD)
 gcloud builds submit \
-  --tag "$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$REPO/$SERVICE_NAME:$VERSION"
+  --tag "$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GCP_PROJECT/$REPO/$SERVICE_NAME:$VERSION"
 ```
 
 #### Deploy to Cloud Run
@@ -216,16 +223,16 @@ Public service with no authentication:
 # Set max-instances to 1 to minimise cost
 gcloud run deploy "$SERVICE_NAME" \
   --port=8080 \
-  --image="$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GOOGLE_CLOUD_PROJECT/$REPO/$SERVICE_NAME:$VERSION" \
+  --image="$GOOGLE_CLOUD_REGION-docker.pkg.dev/$GCP_PROJECT/$REPO/$SERVICE_NAME:$VERSION" \
   --service-account=$RICKBOT_SA_EMAIL \
   --max-instances=1 \
   --allow-unauthenticated \
   --region=$GOOGLE_CLOUD_REGION \
   --platform=managed  \
-  --project=$GOOGLE_CLOUD_PROJECT \
+  --project=$GCP_PROJECT \
   --ingress all \
   --cpu-boost \
-  --set-env-vars=GOOGLE_CLOUD_PROJECT=$GOOGLE_CLOUD_PROJECT,GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL,AUTH_REQUIRED=$AUTH_REQUIRED,RATE_LIMIT=$RATE_LIMIT
+  --set-env-vars=GCP_PROJECT=$GCP_PROJECT,GOOGLE_CLOUD_REGION=$GOOGLE_CLOUD_REGION,LOG_LEVEL=$LOG_LEVEL,AUTH_REQUIRED=$AUTH_REQUIRED,RATE_LIMIT=$RATE_LIMIT
 
 APP_URL=$(gcloud run services describe $SERVICE_NAME --platform managed --region $GOOGLE_CLOUD_REGION --format="value(status.address.url)")
 echo $APP_URL
