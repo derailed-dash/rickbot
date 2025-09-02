@@ -14,6 +14,10 @@ It has been created using Google Gemini, and is grounded with Google Search. The
 
 See the companion article [here](https://medium.com/google-cloud/creating-a-rick-morty-chatbot-with-google-cloud-and-the-gen-ai-sdk-e8108e83dbee).
 
+## Repo Status
+
+This repo is no longer maintained. It has been superseded by the newer [Rickbot-ADK](https://github.com/derailed-dash/rickbot-adk) repo. All new Rickbot features and demos will be hosted in that repo.
+
 ## Repo Structure
 
 ```text
